@@ -10,10 +10,32 @@ const impactMaterials = new Map();
 
 // Hit spheres are sized to the visible body meshes rather than move.reach.
 const HURT = [
-  { name: "head", radius: 0.14, multiplier: 1.25 },
-  { name: "chest", radius: 0.15, multiplier: 1 },
-  { name: "pelvis", radius: 0.18, multiplier: 0.85 },
+  { name: "head", radius: 0.135, multiplier: 1.25, armorSlot: "helmet" },
+  { name: "chest", radius: 0.15, multiplier: 1, armorSlot: "chest" },
+  { name: "pelvis", radius: 0.16, multiplier: 0.85, armorSlot: "legs" },
+  { name: "elbowL", radius: 0.05, multiplier: 0.72, limb: "armL", armorSlot: "bracers" },
+  { name: "elbowR", radius: 0.05, multiplier: 0.72, limb: "armR", armorSlot: "bracers" },
+  { name: "handL", radius: 0.045, multiplier: 0.65, limb: "armL", armorSlot: "bracers" },
+  { name: "handR", radius: 0.045, multiplier: 0.65, limb: "armR", armorSlot: "bracers" },
+  { name: "kneeL", radius: 0.055, multiplier: 0.72, limb: "legL", armorSlot: "legs" },
+  { name: "kneeR", radius: 0.055, multiplier: 0.72, limb: "legR", armorSlot: "legs" },
+  { name: "footL", radius: 0.055, multiplier: 0.62, limb: "legL", armorSlot: "boots" },
+  { name: "footR", radius: 0.055, multiplier: 0.62, limb: "legR", armorSlot: "boots" },
 ];
+
+const SHARP_WEAPONS = new Set(["sword", "axe", "dagger", "spear", "doubleaxe"]);
+
+function isLimbProtected(defender, slot) {
+  const id = defender.equipmentLoadout?.[slot];
+  if (!id) return false;
+  // Flexible cloth/leather equipment offers little protection from a cutting edge.
+  if (slot === "helmet") return ["iron", "arcane"].includes(id);
+  if (slot === "chest") return ["guardian", "shadow", "crystal"].includes(id);
+  if (slot === "legs") return ["knight", "astral"].includes(id);
+  if (slot === "boots") return ["fortress", "mystic"].includes(id);
+  if (slot === "bracers") return ["bulwark", "thorn"].includes(id);
+  return false;
+}
 
 const STRIKE_RADIUS = {
   handL: 0.075, handR: 0.075,
@@ -145,6 +167,7 @@ function connect(attacker, defender) {
 
   let best = null;
   for (const part of HURT) {
+    if (part.limb && defender.missing.has(part.limb)) continue;
     defender.anchorWorld(part.name, _hurt);
     const contactPoint = strikeStart
       ? closestPointOnSegment(_hurt, strikeStart, _strike, _closest).clone()
@@ -153,7 +176,14 @@ function connect(attacker, defender) {
     // A hit only registers when the strike collider physically overlaps the hurtbox.
     // move.reach is intentionally not used as a generous invisible damage radius.
     if (distance <= strikeRadius + part.radius && (!best || distance < best.distance)) {
-      best = { ...part, distance, point: _hurt.clone() };
+      best = {
+        ...part,
+        distance,
+        point: _hurt.clone(),
+        cutLimb: weaponStrike && SHARP_WEAPONS.has(attacker.skeleton.weaponType)
+          && part.limb && !isLimbProtected(defender, part.armorSlot)
+          ? part.limb : null,
+      };
     }
   }
   if (!best) return null;
@@ -203,6 +233,7 @@ function connect(attacker, defender) {
     side: Math.random() < 0.5 ? -1 : 1,
     point: best.point,
     part: best.name,
+    cutLimb: best.cutLimb,
     move,
   };
 }
