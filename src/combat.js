@@ -8,11 +8,40 @@ const _forward = new THREE.Vector3();
 const IMPACT_GEOMETRY = new THREE.SphereGeometry(0.045, 6, 6);
 const impactMaterials = new Map();
 
+// Hit spheres are sized to the visible body meshes rather than move.reach.
 const HURT = [
-  { name: "head", radius: 0.2, multiplier: 1.25 },
-  { name: "chest", radius: 0.26, multiplier: 1 },
-  { name: "pelvis", radius: 0.22, multiplier: 0.85 },
+  { name: "head", radius: 0.14, multiplier: 1.25 },
+  { name: "chest", radius: 0.15, multiplier: 1 },
+  { name: "pelvis", radius: 0.18, multiplier: 0.85 },
 ];
+
+const STRIKE_RADIUS = {
+  handL: 0.075, handR: 0.075,
+  footL: 0.095, footR: 0.095,
+  elbowL: 0.06, elbowR: 0.06,
+  kneeL: 0.065, kneeR: 0.065,
+};
+
+const _weaponBase = new THREE.Vector3();
+const _segment = new THREE.Vector3();
+const _closest = new THREE.Vector3();
+
+function closestPointOnSegment(point, start, end, target) {
+  _segment.subVectors(end, start);
+  const lengthSq = _segment.lengthSq();
+  const t = lengthSq > 1e-10
+    ? THREE.MathUtils.clamp(_closest.subVectors(point, start).dot(_segment) / lengthSq, 0, 1)
+    : 0;
+  return target.copy(start).addScaledVector(_segment, t);
+}
+
+function weaponHitRadius(type) {
+  if (type === "spear") return 0.045;
+  if (type === "mace" || type === "warhammer") return 0.085;
+  if (type === "axe" || type === "doubleaxe") return 0.075;
+  if (type === "dagger") return 0.035;
+  return 0.04;
+}
 
 export function stayInRing(fighter, radius) {
   const { x, z } = fighter.root.position;
@@ -103,17 +132,27 @@ function connect(attacker, defender) {
   if (part && attacker.missing.has(part)) return null;
 
   const weaponStrike = move.limb === "handR" && attacker.hasWeapon && attacker.skeleton?.weapon;
+  let strikeStart = null;
+  let strikeRadius = STRIKE_RADIUS[move.limb] || 0.075;
   if (weaponStrike && attacker.skeleton.anchors.weaponTip) {
     attacker.anchorWorld("weaponTip", _strike);
+    attacker.skeleton.weapon.getWorldPosition(_weaponBase);
+    strikeStart = _weaponBase;
+    strikeRadius = weaponHitRadius(attacker.skeleton.weaponType);
   } else {
     attacker.anchorWorld(move.limb, _strike);
   }
+
   let best = null;
   for (const part of HURT) {
     defender.anchorWorld(part.name, _hurt);
-    const distance = _strike.distanceTo(_hurt);
-    const weaponReach = weaponStrike ? 0.12 + ((attacker.skeleton.weaponReach || 0.58) - 0.58) * 0.7 : 0;
-    if (distance <= move.reach + weaponReach + part.radius && (!best || distance < best.distance)) {
+    const contactPoint = strikeStart
+      ? closestPointOnSegment(_hurt, strikeStart, _strike, _closest).clone()
+      : _strike;
+    const distance = contactPoint.distanceTo(_hurt);
+    // A hit only registers when the strike collider physically overlaps the hurtbox.
+    // move.reach is intentionally not used as a generous invisible damage radius.
+    if (distance <= strikeRadius + part.radius && (!best || distance < best.distance)) {
       best = { ...part, distance, point: _hurt.clone() };
     }
   }
