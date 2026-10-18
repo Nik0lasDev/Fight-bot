@@ -1,6 +1,5 @@
 import { distanceXZ } from "../math.js";
 import { chooseAction, situationKey } from "./brain.js";
-import { MOVES } from "./moves.js";
 
 export class Bot {
   constructor(fighter, profile) {
@@ -57,6 +56,12 @@ export class Bot {
         }
         return;
       }
+    }
+    if (fighter.jointCommand) {
+      this.label = "controlando articulações";
+      fighter.blocking = false;
+      fighter.setLocomotion(0, 0);
+      return;
     }
     if (fighter.move) {
       this.label = this.plan.label || fighter.move.name;
@@ -148,6 +153,12 @@ export class Bot {
     const action = chooseAction(this, fighter, opponent, distance);
     this.plan = action;
     this.label = action.label;
+    if (action.type === "joint") {
+      fighter.startJointMotion(action);
+      fighter.blocking = false;
+      fighter.setLocomotion(0, 0);
+      return;
+    }
     if (action.type === "block") {
       this.blockTimer = action.hold ?? 0.4;
       fighter.blocking = true;
