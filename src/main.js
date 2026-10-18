@@ -74,12 +74,24 @@ function resetArsenal() {
   }
 }
 function assignNearestWeapon(fighter) {
-  const available = groundWeapons.filter((item) => item.available);
-  if (!available.length) return;
+  // Do not let both fighters reserve the same weapon.
+  const reserved = new Set(
+    [nimbus, brasa]
+      .filter((other) => other !== fighter && !other.hasWeapon && other.weaponPickup.item?.available)
+      .map((other) => other.weaponPickup.item),
+  );
+  const available = groundWeapons.filter((item) => item.available && !reserved.has(item));
+  if (!available.length) {
+    fighter.weaponPickup.item = null;
+    fighter.weaponPickup.target = null;
+    fighter.weaponPickup.phase = "search";
+    return;
+  }
   available.sort((a, b) => a.position.distanceTo(fighter.root.position) - b.position.distanceTo(fighter.root.position));
   const item = available[0];
   fighter.weaponPickup.item = item;
   fighter.weaponPickup.target = item.position;
+  fighter.weaponPickup.phase = "search";
 }
 resetArsenal();
 assignNearestWeapon(nimbus);
@@ -378,6 +390,9 @@ function tick() {
 
   // Dropped weapons skid briefly across the floor before friction stops them.
   for (const item of groundWeapons) {
+    // Only simulate floor movement while the weapon is actually on the ground.
+    // A previously dropped weapon can keep velocity data after being picked up.
+    if (!item.available || item.mesh.parent !== scene) continue;
     const drift = item.mesh.userData.droppedVelocity;
     if (!drift || drift.lengthSq() < 0.0025) continue;
     item.mesh.position.x += drift.x * dt;
