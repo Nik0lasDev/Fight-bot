@@ -356,10 +356,13 @@ export class Skeleton {
     item.mesh.position.set(0, -0.012, 0.005);
     item.mesh.rotation.set(0, 0, 0);
     this.weapon = item.mesh;
-    this.weaponType = item.type;
-    this.weaponReach = item.mesh.userData.stats.reach;
-    this.weaponDamage = item.mesh.userData.stats.damage;
-    this.anchors.weaponTip = item.mesh.userData.tip;
+    this.weaponType = item.type || item.mesh.userData.weaponType || "sword";
+    const stats = item.mesh.userData.stats || {};
+    this.weaponReach = Number.isFinite(stats.reach) ? stats.reach : 0.6;
+    this.weaponDamage = Number.isFinite(stats.damage) ? stats.damage : 1;
+    this.anchors.weaponTip = item.mesh.userData.tip || null;
+    // Clear any old ground-skid velocity so it cannot affect the held weapon.
+    delete item.mesh.userData.droppedVelocity;
     this.weaponOnGround = false;
     this.gripStrength = 0.72 + Math.random() * 0.28;
     item.available = false;
