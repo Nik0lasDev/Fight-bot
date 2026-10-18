@@ -34,8 +34,8 @@ const spawn = {
   b: new THREE.Vector3(0.4, 0, 4.2),
 };
 
-const nimbus = new Fighter({ name: "Nimbus", color: 0x3ee0c5, position: spawn.a });
-const brasa = new Fighter({ name: "Brasa", color: 0xff6b4a, position: spawn.b });
+const nimbus = new Fighter({ name: "Nimbus", color: 0x3ee0c5, position: spawn.a, weapon: "sword" });
+const brasa = new Fighter({ name: "Brasa", color: 0xff6b4a, position: spawn.b, weapon: "mace" });
 scene.add(nimbus.root, brasa.root);
 
 const botA = new Bot(nimbus, PROFILES.nimbus);
