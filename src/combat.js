@@ -219,7 +219,8 @@ function connectJoint(attacker, defender) {
   for (const target of HURT) {
     defender.anchorWorld(target.name, _hurt);
     const distance = _strike.distanceTo(_hurt);
-    if (distance <= 0.34 + target.radius && (!best || distance < best.distance)) {
+    const strikeRadius = STRIKE_RADIUS[command.limb] || 0.075;
+    if (distance <= strikeRadius + target.radius && (!best || distance < best.distance)) {
       best = { ...target, distance, point: _hurt.clone() };
     }
   }
