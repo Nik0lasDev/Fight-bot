@@ -65,12 +65,18 @@ function connect(attacker, defender) {
   const part = bodyPart(move.limb);
   if (part && attacker.missing.has(part)) return null;
 
-  attacker.anchorWorld(move.limb, _strike);
+  const weaponStrike = move.limb === "handR" && attacker.skeleton?.weapon;
+  if (weaponStrike && attacker.skeleton.anchors.weaponTip) {
+    attacker.anchorWorld("weaponTip", _strike);
+  } else {
+    attacker.anchorWorld(move.limb, _strike);
+  }
   let best = null;
   for (const part of HURT) {
     defender.anchorWorld(part.name, _hurt);
     const distance = _strike.distanceTo(_hurt);
-    if (distance <= move.reach + part.radius && (!best || distance < best.distance)) {
+    const weaponReach = weaponStrike ? 0.12 : 0;
+    if (distance <= move.reach + weaponReach + part.radius && (!best || distance < best.distance)) {
       best = { ...part, distance, point: _hurt.clone() };
     }
   }
@@ -92,7 +98,8 @@ function connect(attacker, defender) {
   const blocked = guardUp && !breaksGuard;
   const chipped = guardUp && breaksGuard;
 
-  let damage = move.damage * best.multiplier;
+  const weaponDamage = weaponStrike ? (attacker.skeleton.weaponDamage || 1.15) : 1;
+  let damage = move.damage * best.multiplier * weaponDamage;
   let stun = move.stun;
   let force = move.force;
   if (blocked) {
