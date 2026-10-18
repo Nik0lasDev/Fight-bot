@@ -4,6 +4,7 @@ import { createAudio } from "./audio.js";
 import { Bot, PROFILES } from "./fighter/bot.js";
 import { Fighter } from "./fighter/fighter.js";
 import { createGroundWeapon } from "./fighter/weapons.js";
+import { applyEquipment, DEFAULT_LOADOUT, EQUIPMENT_CATALOG, EQUIPMENT_SLOTS, getEquipment } from "./fighter/equipment.js";
 import { resolveHits, stayInRing, createImpact, updateImpacts, resolveBodies } from "./combat.js";
 import { avoidTrees, PLAY_RADIUS, resolveTrees } from "./forest.js";
 
@@ -24,6 +25,10 @@ const ui = {
   startScreen: document.querySelector("#start-screen"),
   start: document.querySelector("#start-btn"),
   app: document.querySelector("#app"),
+  fighterTabs: document.querySelector("#fighter-tabs"),
+  equipmentSummary: document.querySelector("#equipment-summary"),
+  equipmentSlots: document.querySelector("#equipment-slots"),
+  equipmentOptions: document.querySelector("#equipment-options"),
 };
 
 const { renderer, scene, camera, controls, sun, trees } = createArena(canvas);
@@ -79,6 +84,81 @@ function assignNearestWeapon(fighter) {
 resetArsenal();
 assignNearestWeapon(nimbus);
 assignNearestWeapon(brasa);
+
+const loadouts = {
+  nimbus: { ...DEFAULT_LOADOUT },
+  brasa: { ...DEFAULT_LOADOUT },
+};
+let activeFighterId = "nimbus";
+let activeEquipmentSlot = "helmet";
+
+function selectedFighter() {
+  return activeFighterId === "nimbus" ? nimbus : brasa;
+}
+
+function refreshEquipmentModels() {
+  applyEquipment(nimbus, loadouts.nimbus);
+  applyEquipment(brasa, loadouts.brasa);
+}
+
+function renderEquipmentWorkshop() {
+  const fighter = selectedFighter();
+  const loadout = loadouts[activeFighterId];
+  const stats = fighter.equipmentStats || { defense: 0, damage: 0, speed: 0, stunResist: 0 };
+  ui.fighterTabs.querySelectorAll("[data-fighter]").forEach((button) => {
+    const active = button.dataset.fighter === activeFighterId;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  ui.equipmentSummary.innerHTML = [
+    ["Defesa", `-${Math.round(stats.defense * 100)}%`],
+    ["Dano", `+${Math.round(stats.damage * 100)}%`],
+    ["Velocidade", `${stats.speed >= 0 ? "+" : ""}${Math.round(stats.speed * 100)}%`],
+    ["Resistência", `${Math.round(stats.stunResist * 100)}%`],
+  ].map(([label, value]) => `<div class="stat-chip"><span>${label}</span><strong>${value}</strong></div>`).join("");
+  ui.equipmentSlots.innerHTML = EQUIPMENT_SLOTS.map((slot) => {
+    const active = slot.id === activeEquipmentSlot;
+    const selected = getEquipment(slot.id, loadout[slot.id]);
+    return `<button type="button" class="slot-button ${active ? "is-active" : ""}" data-slot="${slot.id}" aria-pressed="${active}">${slot.label}: ${selected.name}</button>`;
+  }).join("");
+  const options = EQUIPMENT_CATALOG[activeEquipmentSlot];
+  ui.equipmentOptions.innerHTML = options.map((entry) => {
+    const active = loadout[activeEquipmentSlot] === entry.id;
+    return `<button type="button" class="equipment-option ${active ? "is-selected" : ""}" data-item="${entry.id}" aria-pressed="${active}">
+      <span class="item-swatch" style="--item-color:${entry.color}"></span>
+      <span class="item-name">${entry.name}</span>
+      <span class="item-material">${entry.material}</span>
+      <span class="item-texture">${entry.texture}</span>
+      <span class="item-skill">${entry.skill}</span>
+      <span class="item-ability">${entry.ability}</span>
+    </button>`;
+  }).join("");
+}
+
+refreshEquipmentModels();
+renderEquipmentWorkshop();
+
+ui.fighterTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-fighter]");
+  if (!button) return;
+  activeFighterId = button.dataset.fighter;
+  renderEquipmentWorkshop();
+});
+
+ui.equipmentSlots.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-slot]");
+  if (!button) return;
+  activeEquipmentSlot = button.dataset.slot;
+  renderEquipmentWorkshop();
+});
+
+ui.equipmentOptions.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-item]");
+  if (!button) return;
+  loadouts[activeFighterId][activeEquipmentSlot] = button.dataset.item;
+  refreshEquipmentModels();
+  renderEquipmentWorkshop();
+});
 
 const botA = new Bot(nimbus, PROFILES.nimbus);
 const botB = new Bot(brasa, PROFILES.brasa);
@@ -149,6 +229,7 @@ function resetRound() {
 }
 
 function startSimulation() {
+  refreshEquipmentModels();
   ui.startScreen.hidden = true;
   ui.app.classList.remove("is-menu");
   audio.unlock();
