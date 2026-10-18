@@ -97,6 +97,7 @@ export class Fighter {
     if (!blocked) {
       this._finishMove("hurt");
       this.move = null;
+      this.jointCommand = null;
       this.phase = "idle";
       this.blocking = false;
     }
@@ -106,6 +107,7 @@ export class Fighter {
       this.ko = true;
       this.koTime = 0;
       this.move = null;
+      this.jointCommand = null;
       this.blocking = false;
     }
     this.skeleton.setHealth(this.health / this.maxHealth);
