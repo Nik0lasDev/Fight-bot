@@ -85,13 +85,24 @@ export class Skeleton {
     this._sphere(root, radius * 1.25, this.jointMaterial);
     this._bone(root, length, radius, this.skin);
 
+    // Three articulated phalanges per digit: base, middle and fingertip.
     const middle = new THREE.Group();
     middle.position.y = -length;
     middle.rotation.x = -0.55;
     root.add(middle);
     root.userData.middle = middle;
     this._sphere(middle, radius * 1.05, this.jointMaterial);
-    this._bone(middle, length * 0.72, radius * 0.82, this.skin);
+    const middleLength = length * 0.72;
+    this._bone(middle, middleLength, radius * 0.82, this.skin);
+
+    const distal = new THREE.Group();
+    distal.name = "distalJoint";
+    distal.position.y = -middleLength;
+    distal.rotation.x = -0.28;
+    middle.add(distal);
+    middle.userData.distal = distal;
+    this._sphere(distal, radius * 0.82, this.jointMaterial);
+    this._bone(distal, length * 0.48, radius * 0.68, this.skin);
     return root;
   }
 
@@ -410,7 +421,10 @@ export class Skeleton {
       const closedAngle = thumb ? -1.12 : -0.98;
       digit.rotation.x = THREE.MathUtils.lerp(openAngle, closedAngle, target);
       if (digit.userData.middle) {
-        digit.userData.middle.rotation.x = THREE.MathUtils.lerp(-0.55, -1.28, target);
+        digit.userData.middle.rotation.x = THREE.MathUtils.lerp(-0.55, -1.18, target);
+        if (digit.userData.middle.userData.distal) {
+          digit.userData.middle.userData.distal.rotation.x = THREE.MathUtils.lerp(-0.28, -0.82, target);
+        }
       }
       // The thumb rotates inward across the palm, opposing the fingers around
       // the grip instead of curling in the same plane as every other digit.
