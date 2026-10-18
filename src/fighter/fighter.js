@@ -82,7 +82,7 @@ export class Fighter {
   receiveHit({ damage, stun, force, direction, blocked, side }) {
     this.health = Math.max(0, this.health - damage);
     this.flinchSide = side;
-    if (stun > 0) this.stun = Math.max(this.stun, stun);
+    if (stun > 0) this.stun = Math.max(this.stun, stun * (1 - (this.equipmentStats?.stunResist || 0)));
     if (!blocked) {
       this._finishMove("hurt");
       this.move = null;
@@ -216,7 +216,7 @@ export class Fighter {
       strafe = 0;
     }
 
-    const walk = 2.25;
+    const walk = 2.25 * (1 + (this.equipmentStats?.speed || 0));
     const desiredX = _forward.x * throttle * walk + _right.x * strafe * walk * 0.82;
     const desiredZ = _forward.z * throttle * walk + _right.z * strafe * walk * 0.82;
     const pushing = Math.hypot(desiredX, desiredZ) > 0.2;
