@@ -3,7 +3,7 @@ import { POSE_JOINTS } from "./poses.js";
 const pair = (x, y, z) => ({ x, y, z });
 
 // Articulações com amplitude quase total. O limite de ±2.95 rad (≈169°)
-// evita a singularidade exata de 180°; a pose continua limitada por colisões físicas.
+// evita a singularidade exata de 180° durante as interpolações de pose.
 const FREE = pair([-2.95, 2.95], [-2.95, 2.95], [-2.95, 2.95]);
 export const ROM = {
   waist: FREE,
