@@ -418,45 +418,8 @@ export class Fighter {
     if (pickup.phase !== "reach") return;
 
     pickup.time += dt;
-    // Lift the weapon visibly from the floor into the palm; do not snap it.
-    if (pickup.time >= 1.7) {
-      const weapon = pickup.item.mesh;
-      const wristJoint = this.skeleton.joints.wristR;
-      if (!weapon || !wristJoint) return;
-      if (!pickup.liftStartPosition) {
-        this.root.updateMatrixWorld(true);
-        weapon.updateMatrixWorld(true);
-        pickup.liftStartPosition = weapon.getWorldPosition(new THREE.Vector3());
-        pickup.liftStartQuaternion = weapon.getWorldQuaternion(new THREE.Quaternion());
-        pickup.liftTime = 0;
-      }
-      pickup.liftTime += dt;
-      const progress = THREE.MathUtils.smoothstep(pickup.liftTime, 0, 0.72);
-      this.root.updateMatrixWorld(true);
-      const targetPosition = wristJoint.localToWorld(new THREE.Vector3(0, -0.045, 0.025));
-      const targetQuaternion = wristJoint.getWorldQuaternion(new THREE.Quaternion());
-      weapon.position.copy(pickup.liftStartPosition).lerp(targetPosition, progress);
-      weapon.quaternion.copy(pickup.liftStartQuaternion).slerp(targetQuaternion, progress);
-      if (pickup.liftTime >= 0.72) {
-        let equipped = false;
-        try { equipped = this.skeleton.gripWeapon(wristJoint, pickup.item); }
-        catch (error) {
-          console.error('Falha ao concluir a pegada da arma.', error);
-          if (pickup.item) pickup.item.available = true;
-        }
-        if (equipped) {
-          this.hasWeapon = true;
-          pickup.phase = 'done';
-          pickup.liftStartPosition = null;
-          pickup.liftStartQuaternion = null;
-          this.throttle = 0;
-          this.strafe = 0;
-          return;
-        }
-      }
-      return;
-    }
-    // Before lifting, let the character lower their body and extend the arm.
+    // The item stays on the ground until the lowered hand reaches it.
+    // Lower the body and extend the hand toward the item, which stays on the ground.
     const t = THREE.MathUtils.clamp(pickup.time / 2.25, 0, 1);
     const shoulder = this.skeleton.joints.shoulderR;
     const elbow = this.skeleton.joints.elbowR;
