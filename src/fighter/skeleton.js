@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { attachToes } from "./toes.js";
+import { attachCharacterSkin } from "./skins.js";
 
 const LENGTH = {
   upperArm: 0.3,
@@ -287,6 +288,7 @@ export class Skeleton {
 
     this._leg(pelvis, "L", color);
     this._leg(pelvis, "R", color);
+    attachCharacterSkin(this, chest, pelvis, headJoint, color, this.weaponType);
     this._status(headJoint);
   }
 
