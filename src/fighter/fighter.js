@@ -459,7 +459,11 @@ export class Fighter {
       this.skeleton.anchorWorld(name, _sole);
       lowest = Math.min(lowest, _sole.y);
     }
-    this.root.position.y -= lowest - 0.02;
+    // Only lift the root when a foot penetrates the floor. Do not force the
+    // lowest foot onto the floor every frame: during kicks/jumps both feet may
+    // be raised, and correcting that as a planted stance makes the whole fighter
+    // float upward.
+    this.root.position.y = Math.max(0, this.root.position.y - lowest + 0.02);
     this.standY = this.root.position.y;
   }
 
