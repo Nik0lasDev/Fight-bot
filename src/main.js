@@ -105,13 +105,14 @@ function equipmentIllustration(slotId, entry) {
   const id = entry.id;
   const color = entry.color;
   const dark = "#17202d";
+  const svgId = `${slotId}-${id}`;
   const metal = "#dce7ef";
   const accent = ["ember", "dragon", "inferno", "flame", "crusher"].includes(id) ? "#ffb05a"
     : ["arcane", "crystal", "astral", "mystic"].includes(id) ? "#9cf4ff"
     : ["royal", "duelist"].includes(id) ? "#ffe09a" : "#d4e2ec";
   let silhouette = "";
   if (slotId === "helmet") {
-    silhouette = `<path d="M43 65 Q42 29 80 23 Q118 29 117 65 L108 78 L52 78 Z" fill="url(#metal)"/><path d="M47 62 Q80 47 113 62 L111 74 L49 74 Z" fill="${color}"/><path d="M52 77 L108 77 L103 89 L57 89 Z" fill="${color}"/><path d="M59 61 L101 61 L97 68 L63 68 Z" fill="${dark}"/><path d="M80 25 L80 53" stroke="${accent}" stroke-width="4" stroke-linecap="round"/>`;
+    silhouette = `<path d="M43 65 Q42 29 80 23 Q118 29 117 65 L108 78 L52 78 Z" fill="url(#metal-${svgId})"/><path d="M47 62 Q80 47 113 62 L111 74 L49 74 Z" fill="${color}"/><path d="M52 77 L108 77 L103 89 L57 89 Z" fill="${color}"/><path d="M59 61 L101 61 L97 68 L63 68 Z" fill="${dark}"/><path d="M80 25 L80 53" stroke="${accent}" stroke-width="4" stroke-linecap="round"/>`;
     if (id === "ember") silhouette += `<path d="M52 39 L35 16 L64 30 M108 39 L125 16 L96 30" fill="${color}" stroke="${accent}" stroke-width="3" stroke-linejoin="round"/>`;
     if (id === "ranger") silhouette += `<path d="M53 32 L80 8 L107 32 L98 39 L80 27 L62 39 Z" fill="${color}" stroke="${accent}" stroke-width="2"/>`;
     if (id === "arcane") silhouette += `<path d="M80 13 L88 25 L80 37 L72 25 Z" fill="${accent}" stroke="#fff" stroke-width="1.5"/>`;
@@ -127,7 +128,7 @@ function equipmentIllustration(slotId, entry) {
     silhouette = `<path d="M60 20 Q80 13 100 20 L108 78 Q80 95 52 78 Z" fill="url(#metal)" stroke="${dark}" stroke-width="3"/><path d="M62 27 Q80 21 98 27 L102 74 Q80 86 58 74 Z" fill="${color}" stroke="${accent}" stroke-width="2"/><path d="M58 39 L102 39 M56 60 L104 60 M61 74 L99 74" stroke="${accent}" stroke-width="4"/>`;
     if (id === "thorn") silhouette += `<path d="M60 34 L47 20 L68 28 M80 34 L80 13 L87 31 M100 34 L114 20 L93 28" fill="${color}" stroke="${accent}" stroke-width="3" stroke-linejoin="round"/>`;
   } else {
-    silhouette = `<path d="M65 22 L78 29 L82 29 L95 22 L111 34 L103 48 L111 91 Q80 105 49 91 L57 48 L49 34 Z" fill="${color}" stroke="${dark}" stroke-width="3" stroke-linejoin="round"/><path d="M65 25 L80 36 L95 25 L101 43 L94 87 Q80 94 66 87 L59 43 Z" fill="url(#cloth)" stroke="${accent}" stroke-width="2"/><path d="M65 31 L80 42 L95 31 M61 48 L99 48 M59 66 L101 66 M58 83 L102 83" fill="none" stroke="${accent}" stroke-width="3" opacity=".95"/>`;
+    silhouette = `<path d="M65 22 L78 29 L82 29 L95 22 L111 34 L103 48 L111 91 Q80 105 49 91 L57 48 L49 34 Z" fill="${color}" stroke="${dark}" stroke-width="3" stroke-linejoin="round"/><path d="M65 25 L80 36 L95 25 L101 43 L94 87 Q80 94 66 87 L59 43 Z" fill="url(#cloth-${svgId})" stroke="${accent}" stroke-width="2"/><path d="M65 31 L80 42 L95 31 M61 48 L99 48 M59 66 L101 66 M58 83 L102 83" fill="none" stroke="${accent}" stroke-width="3" opacity=".95"/>`;
     if (id === "royal") silhouette += `<path d="M69 40 L80 30 L91 40 L80 52 Z" fill="${accent}" stroke="#fff" stroke-width="1.5"/>`;
     if (id === "forest") silhouette += `<path d="M80 51 Q61 39 65 31 Q80 34 80 51 Q95 35 99 31 Q102 45 80 51 Z" fill="${accent}"/>`;
   }
@@ -137,11 +138,11 @@ function equipmentIllustration(slotId, entry) {
     : `<path d="M39 100 L121 100" stroke="${accent}" stroke-width="2" opacity=".5"/>`;
   return `<svg class="equipment-art" viewBox="0 0 160 116" role="img" aria-label="${entry.name}, ${entry.material}" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5fbff"/><stop offset=".35" stop-color="${color}"/><stop offset=".72" stop-color="${dark}"/><stop offset="1" stop-color="${color}"/></linearGradient>
-      <linearGradient id="cloth" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${accent}"/><stop offset=".35" stop-color="${color}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
-      <radialGradient id="glow"><stop stop-color="${color}" stop-opacity=".32"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="metal-${svgId}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5fbff"/><stop offset=".35" stop-color="${color}"/><stop offset=".72" stop-color="${dark}"/><stop offset="1" stop-color="${color}"/></linearGradient>
+      <linearGradient id="cloth-${svgId}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${accent}"/><stop offset=".35" stop-color="${color}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
+      <radialGradient id="glow-${svgId}"><stop stop-color="${color}" stop-opacity=".32"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>
     </defs>
-    <ellipse cx="80" cy="63" rx="58" ry="48" fill="url(#glow)"/>
+    <ellipse cx="80" cy="63" rx="58" ry="48" fill="url(#glow-${svgId})"/>
     ${pattern}${silhouette}
     <path d="M42 105 Q80 111 118 105" fill="none" stroke="#b8c7d8" stroke-width="1" opacity=".28"/>
   </svg>`;
