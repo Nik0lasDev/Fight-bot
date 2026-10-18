@@ -402,39 +402,71 @@ export class Fighter {
     const dx = target.x - this.root.position.x;
     const dz = target.z - this.root.position.z;
     const distance = Math.hypot(dx, dz);
+
     if (pickup.phase === "search" && distance < 0.56) {
       pickup.phase = "reach";
       pickup.time = 0;
       this.setLocomotion(0, 0);
-      this.velocity.x *= 0.18;
-      this.velocity.z *= 0.18;
+      this.velocity.x *= 0.12;
+      this.velocity.z *= 0.12;
     }
     if (pickup.phase !== "reach") return;
 
     pickup.time += dt;
     const t = Math.min(1, pickup.time / 1.35);
-    // Close the actual articulated fingers after the hand has reached the grip.
-    this.skeleton.setHandGrip("R", t > 0.48);
-    if (pickup.time >= 1.35) {
-      const wristJoint = this.skeleton.joints.wristR;
-      this.root.updateMatrixWorld(true);
-      let equipped = false;
-      try {
-        equipped = this.skeleton.gripWeapon(wristJoint, pickup.item);
-      } catch (error) {
-        console.error("Falha ao equipar arma; a luta continuará sem equipá-la.", error);
-        if (pickup.item) pickup.item.available = true;
-      }
-      this.hasWeapon = equipped;
-      pickup.phase = equipped ? "done" : "search";
-      if (!equipped) {
-        pickup.item = null;
-        pickup.target = null;
-        this.skeleton.setHandGrip("R", false);
-      }
-      this.throttle = 0;
-      this.strafe = 0;
+    const shoulder = this.skeleton.joints.shoulderR;
+    const elbow = this.skeleton.joints.elbowR;
+    const wrist = this.skeleton.joints.wristR;
+    const fingers = this.skeleton.joints.fingerR;
+
+    // Keep the weapon visibly on the floor throughout the reach. The hand
+    // moves down first; only a real hand-to-item contact can attach it.
+    if (shoulder) {
+      shoulder.rotation.x = THREE.MathUtils.lerp(shoulder.rotation.x, -2.35, Math.min(1, dt * 9));
+      shoulder.rotation.z = THREE.MathUtils.lerp(shoulder.rotation.z, -0.08, Math.min(1, dt * 9));
     }
+    if (elbow) elbow.rotation.x = THREE.MathUtils.lerp(elbow.rotation.x, -0.12, Math.min(1, dt * 9));
+    if (wrist) wrist.rotation.x = THREE.MathUtils.lerp(wrist.rotation.x, -0.12, Math.min(1, dt * 9));
+    if (fingers) fingers.rotation.x = THREE.MathUtils.lerp(fingers.rotation.x, -0.12, Math.min(1, dt * 9));
+    this.skeleton.setHandGrip("R", t > 0.48);
+
+    this.root.updateMatrixWorld(true);
+    const handWorld = wrist ? wrist.getWorldPosition(_sole) : null;
+    const itemWorld = pickup.item.mesh?.getWorldPosition(new THREE.Vector3());
+    const contactDistance = handWorld && itemWorld ? handWorld.distanceTo(itemWorld) : Infinity;
+
+    // Do not teleport the item to the hand at the end of a timer. Wait for the
+    // wrist to physically reach the item; if contact is missed, keep reaching.
+    if (contactDistance > 0.3) {
+      if (pickup.time > 2.8) {
+        // Reset the reach cycle so the bot can adjust its stance and try again.
+        pickup.time = 0.45;
+        this.root.position.x += dx * 0.08;
+        this.root.position.z += dz * 0.08;
+      }
+      return;
+    }
+
+    // Contact reached: close the fingers around the handle, then attach it.
+    if (t < 0.72) return;
+    const wristJoint = this.skeleton.joints.wristR;
+    this.root.updateMatrixWorld(true);
+    let equipped = false;
+    try {
+      equipped = this.skeleton.gripWeapon(wristJoint, pickup.item);
+    } catch (error) {
+      console.error("Falha ao equipar arma; a luta continuará sem equipá-la.", error);
+      if (pickup.item) pickup.item.available = true;
+    }
+    this.hasWeapon = equipped;
+    pickup.phase = equipped ? "done" : "search";
+    if (!equipped) {
+      pickup.item = null;
+      pickup.target = null;
+      this.skeleton.setHandGrip("R", false);
+    }
+    this.throttle = 0;
+    this.strafe = 0;
   }
 
   takeLosses() {
