@@ -4,8 +4,12 @@ export function createAudio() {
 
   function ensure() {
     if (!enabled) return null;
-    if (!context) context = new AudioContext();
-    if (context.state === "suspended") context.resume();
+    if (!context) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      context = new AudioContextClass();
+    }
+    if (context.state === "suspended") context.resume().catch(() => {});
     return context;
   }
 
