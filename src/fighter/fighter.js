@@ -392,8 +392,21 @@ export class Fighter {
     if (pickup.time >= 0.95) {
       const wristJoint = this.skeleton.joints.wristR;
       this.root.updateMatrixWorld(true);
-      this.hasWeapon = this.skeleton.gripWeapon(wristJoint, pickup.item);
-      pickup.phase = this.hasWeapon ? "done" : "search";
+      let equipped = false;
+      try {
+        equipped = this.skeleton.gripWeapon(wristJoint, pickup.item);
+      } catch (error) {
+        // A malformed weapon must not stop the entire animation loop.
+        console.error("Falha ao equipar arma; a luta continuará sem equipá-la.", error);
+        if (pickup.item) pickup.item.available = true;
+      }
+      this.hasWeapon = equipped;
+      pickup.phase = equipped ? "done" : "search";
+      if (!equipped) {
+        pickup.item = null;
+        pickup.target = null;
+        this.skeleton.setHandGrip("R", false);
+      }
       this.throttle = 0;
       this.strafe = 0;
     }
