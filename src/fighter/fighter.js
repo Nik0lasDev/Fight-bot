@@ -271,9 +271,29 @@ export class Fighter {
     const walk = 2.25 * (1 + (this.equipmentStats?.speed || 0));
     const desiredX = _forward.x * throttle * walk + _right.x * strafe * walk * 0.82;
     const desiredZ = _forward.z * throttle * walk + _right.z * strafe * walk * 0.82;
-    const pushing = Math.hypot(desiredX, desiredZ) > 0.2;
-    const rate = this.stun > 0 ? 4.5 : pushing ? (this.move ? 13 : 7.2) : 10;
-    this._steer(desiredX, desiredZ, rate, dt);
+    const desiredSpeed = Math.hypot(desiredX, desiredZ);
+    const pushing = desiredSpeed > 0.2;
+
+    if (pushing) {
+      // Acceleration is limited, so changing direction carries a little momentum.
+      const rate = this.stun > 0 ? 2.8 : this.move ? 9.2 : 6.4;
+      this._steer(desiredX, desiredZ, rate, dt);
+    } else {
+      // Ground friction slows the fighter gradually instead of cancelling velocity instantly.
+      const drag = this.stun > 0 ? 0.85 : this.ko ? 1.8 : 3.4;
+      const damping = Math.exp(-drag * dt);
+      this.velocity.x *= damping;
+      this.velocity.z *= damping;
+    }
+
+    // Keep lunges and knockback bounded while still allowing a short burst of speed.
+    const maxSpeed = this.stun > 0 ? 4.2 : this.move ? 3.65 : 2.8;
+    const speed = Math.hypot(this.velocity.x, this.velocity.z);
+    if (speed > maxSpeed) {
+      const scale = maxSpeed / speed;
+      this.velocity.x *= scale;
+      this.velocity.z *= scale;
+    }
 
     this.root.position.x += this.velocity.x * dt;
     this.root.position.z += this.velocity.z * dt;
