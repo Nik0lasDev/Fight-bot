@@ -273,7 +273,7 @@ export class Fighter {
   }
 
   _ripLimbs(desired, dt) {
-    const actual = readLimbPose(this.skeleton.joints, this._jointSampleNext);
+    const actual = readLimbPose(this.skeleton.joints, this._jointSampleNext || undefined);
     for (const id of condemnedLimbs(desired, null, 0, this._lostDesired)) this._loseLimb(id);
     for (const id of condemnedLimbs(actual, this._jointSample, dt, this._lostActual)) this._loseLimb(id);
     this._jointSampleNext = this._jointSample;
