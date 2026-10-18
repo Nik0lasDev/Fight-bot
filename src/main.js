@@ -207,6 +207,17 @@ ui.equipmentOptions.addEventListener("click", (event) => {
   renderEquipmentWorkshop();
 });
 
+for (const fighter of [nimbus, brasa]) {
+  fighter.weaponScene = scene;
+  fighter.onWeaponDrop = (dropped) => {
+    const item = { type: dropped.type, name: dropped.mesh.userData.stats?.name || dropped.type, mesh: dropped.mesh, position: dropped.position, available: true };
+    groundWeapons.push(item);
+    fighter.weaponPickup.item = item;
+    fighter.weaponPickup.target = item.position;
+    pushFeed(`${fighter.name} deixa a arma escapar!`);
+  };
+}
+
 const botA = new Bot(nimbus, PROFILES.nimbus);
 const botB = new Bot(brasa, PROFILES.brasa);
 
@@ -364,6 +375,18 @@ function updateMatch(dt) {
 function tick() {
   animationFrame = 0;
   const dt = Math.min(clock.getDelta(), 0.033);
+
+  // Dropped weapons skid briefly across the floor before friction stops them.
+  for (const item of groundWeapons) {
+    const drift = item.mesh.userData.droppedVelocity;
+    if (!drift || drift.lengthSq() < 0.0025) continue;
+    item.mesh.position.x += drift.x * dt;
+    item.mesh.position.z += drift.z * dt;
+    drift.multiplyScalar(Math.max(0, 1 - dt * 2.8));
+    item.mesh.position.x = THREE.MathUtils.clamp(item.mesh.position.x, -PLAY_RADIUS, PLAY_RADIUS);
+    item.mesh.position.z = THREE.MathUtils.clamp(item.mesh.position.z, -PLAY_RADIUS, PLAY_RADIUS);
+    item.position.set(item.mesh.position.x, 0, item.mesh.position.z);
+  }
 
   if (match.orbitIdle > 0) {
     match.orbitIdle -= dt;
