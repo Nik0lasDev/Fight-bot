@@ -1,4 +1,5 @@
 import { ROAM_RADIUS } from "../forest.js";
+import { MOVES } from "./moves.js";
 
 function inward(fighter, throttle, strafe) {
   const radius = Math.hypot(fighter.root.position.x, fighter.root.position.z);
@@ -57,15 +58,35 @@ export function situationKey(fighter, opponent, distance) {
 }
 
 export function chooseAction(bot, fighter, opponent, distance) {
-  if (opponent.isThreatening && distance < 2.15) {
+  if (opponent.isThreatening && distance < 1.9 && Math.random() < 0.48) {
     const kind = opponent.move?.kind;
     if (kind === "kick" || kind === "knee") {
-      return inward(fighter, -0.62, Math.random() < 0.5 ? -0.7 : 0.7);
+      return inward(fighter, -0.48, Math.random() < 0.5 ? -0.6 : 0.6);
     }
-    return { type: "block", throttle: -0.18, strafe: 0, hold: 0.28 + Math.random() * 0.18, label: "protege o corpo" };
+    return { type: "block", throttle: -0.08, strafe: 0, hold: 0.18 + Math.random() * 0.16, label: "protege o corpo" };
   }
-  if (distance > 1.75) return inward(fighter, 0.78, (Math.random() - 0.5) * 0.35);
-  if (distance < 0.82) return inward(fighter, -0.35, Math.random() < 0.5 ? -0.55 : 0.55);
-  if (Math.random() < 0.2) return inward(fighter, (Math.random() - 0.5) * 0.25, Math.random() < 0.5 ? -0.55 : 0.55);
-  return jointMotion(distance, opponent, fighter);
+
+  // Pick an actual damaging move instead of spending most close-range decisions
+  // on decorative joint motions and footwork.
+  const kit = bot.profile.kit || [];
+  const candidates = kit
+    .map((id) => MOVES[id])
+    .filter((move) => move?.damage > 0 && distance >= (move.range?.min ?? 0.5) - 0.12
+      && distance <= (move.range?.max ?? 2.0) + 0.08);
+
+  if (candidates.length && Math.random() < Math.min(0.94, 0.72 * (bot.profile.attack || 1))) {
+    const followUp = bot.followTime > 0 ? MOVES[bot.followUp] : null;
+    const move = followUp && followUp.damage > 0
+      && distance >= (followUp.range?.min ?? 0.5) - 0.12
+      && distance <= (followUp.range?.max ?? 2.0) + 0.08
+      ? followUp
+      : candidates[Math.floor(Math.random() * candidates.length)];
+    return { type: "strike", id: move.id, label: move.name };
+  }
+
+  if (distance > 1.75) return inward(fighter, 0.9, (Math.random() - 0.5) * 0.25);
+  if (distance < 0.58) return inward(fighter, -0.22, Math.random() < 0.5 ? -0.35 : 0.35);
+  if (Math.random() < 0.12) return inward(fighter, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? -0.45 : 0.45);
+  if (Math.random() < 0.22) return jointMotion(distance, opponent, fighter);
+  return inward(fighter, 0.16, Math.random() < 0.5 ? -0.28 : 0.28);
 }
