@@ -38,7 +38,7 @@
 - 🟠 **Brasa** — lutador coral.
 - 🌲 **Arena na floresta** — cenário 3D com câmera dinâmica.
 - 🧠 **Combate autônomo** — os bots escolhem golpes, fintas, esquivas e defesas.
-- ⚔️ **Arsenal medieval no chão** — sete opções: espada, clava, machado, lança, adaga, martelo de guerra e machado duplo. Os bots escolhem armas disponíveis, caminham até elas e executam a animação de coleta com a mão; cada arma tem alcance e dano próprios.
+- 🛡️ **Oficina de equipamentos pré-batalha** — escolha capacete, peitoral, calça, botas, braçadeiras e capa para Nimbus e Brasa; são quatro variantes por categoria, cada uma com cor, material, textura, habilidade e bônus próprios.\n- ⚔️ **Arsenal medieval no chão** — sete opções: espada, clava, machado, lança, adaga, martelo de guerra e machado duplo. Os bots escolhem armas disponíveis, caminham até elas e executam a animação de coleta com a mão; cada arma tem alcance e dano próprios.
 - ❤️ **HUD de combate** — vida, intenção dos bots, rounds e placar.
 - 🔊 **Áudio e efeitos** — feedback sonoro durante a luta.
 - 📱 **Câmera adaptável** — enquadramento ajustado para telas verticais e horizontais.
