@@ -154,7 +154,7 @@ export class Bot {
     this.plan = action;
     this.label = action.label;
     if (action.type === "joint") {
-      fighter.startJointMotion(action);
+      if (fighter.startJointMotion(action)) this.attackCooldown = action.duration * 0.28;
       fighter.blocking = false;
       fighter.setLocomotion(0, 0);
       return;
