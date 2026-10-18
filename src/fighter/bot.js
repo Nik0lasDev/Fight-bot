@@ -46,7 +46,7 @@ export class Bot {
         const dx = target.x - fighter.root.position.x;
         const dz = target.z - fighter.root.position.z;
         const distanceToWeapon = Math.hypot(dx, dz);
-        if (distanceToWeapon > 0.78) {
+        if (distanceToWeapon > 0.48) {
           fighter.blocking = false;
           fighter.root.rotation.y = Math.atan2(dx, dz);
           fighter.setLocomotion(0.72, 0);
