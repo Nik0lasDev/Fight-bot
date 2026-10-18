@@ -20,6 +20,9 @@ export class Fighter {
     this.skeleton = new Skeleton(color, weapon);
     this.weaponPickup = { phase: "search", time: 0, target: null, item: null };
     this.hasWeapon = false;
+    this.weaponScene = null;
+    this.onWeaponDrop = null;
+    this.gripSlipCooldown = 0;
     this.root = this.skeleton.root;
     this.root.position.set(position.x, 0, position.z);
     this.hasWeapon = false;
@@ -92,6 +95,7 @@ export class Fighter {
 
   receiveHit({ damage, stun, force, direction, blocked, side }) {
     this.health = Math.max(0, this.health - damage);
+    this._testWeaponGrip(force, blocked);
     this.flinchSide = side;
     if (stun > 0) this.stun = Math.max(this.stun, stun * (1 - (this.equipmentStats?.stunResist || 0)));
     if (!blocked) {
@@ -110,7 +114,35 @@ export class Fighter {
       this.jointCommand = null;
       this.blocking = false;
     }
+    if (this.health <= 0) this._dropHeldWeapon();
     this.skeleton.setHealth(this.health / this.maxHealth);
+  }
+
+  _testWeaponGrip(force = 0, blocked = false) {
+    if (!this.hasWeapon || this.gripSlipCooldown > 0) return;
+    const wrist = this.skeleton.joints.wristR;
+    const closure = this.skeleton.handGrip.R || 0;
+    const wristStrain = wrist ? Math.min(1, Math.abs(wrist.rotation.x) * 0.12 + Math.abs(wrist.rotation.z) * 0.1) : 0.2;
+    const impact = Math.max(0, force || 0) * (blocked ? 0.48 : 1);
+    this.skeleton.gripStrength = Math.max(0, this.skeleton.gripStrength - impact * (0.075 + wristStrain * 0.045));
+    const weakGrip = (1 - closure) * 0.22 + (1 - this.skeleton.gripStrength) * 0.28;
+    const slipChance = Math.min(0.88, Math.max(0, impact - 0.55) * 0.22 + weakGrip);
+    if (impact > 1.05 && Math.random() < slipChance) {
+      this._dropHeldWeapon();
+      this.gripSlipCooldown = 1.2;
+    }
+  }
+
+  _dropHeldWeapon() {
+    if (!this.hasWeapon || !this.weaponScene) return;
+    const dropped = this.skeleton.releaseWeapon(this.weaponScene, this.root.rotation.y, this.velocity);
+    if (!dropped) return;
+    this.hasWeapon = false;
+    this.weaponPickup.phase = 'search';
+    this.weaponPickup.time = 0;
+    this.weaponPickup.item = null;
+    this.weaponPickup.target = null;
+    if (this.onWeaponDrop) this.onWeaponDrop(dropped);
   }
 
   reset(position) {
@@ -152,6 +184,8 @@ export class Fighter {
 
   update(dt, opponent) {
     this.stun = Math.max(0, this.stun - dt);
+    this.gripSlipCooldown = Math.max(0, this.gripSlipCooldown - dt);
+    if (this.hasWeapon) this.skeleton.gripStrength = Math.min(1, this.skeleton.gripStrength + dt * 0.018);
 
     if (!this.ko) {
       this._face(opponent, dt);
@@ -322,9 +356,8 @@ export class Fighter {
     if (pickup.time >= 0.95) {
       const wristJoint = this.skeleton.joints.wristR;
       this.root.updateMatrixWorld(true);
-      this.skeleton.gripWeapon(wristJoint, pickup.item);
-      this.hasWeapon = true;
-      pickup.phase = "done";
+      this.hasWeapon = this.skeleton.gripWeapon(wristJoint, pickup.item);
+      pickup.phase = this.hasWeapon ? "done" : "search";
       this.throttle = 0;
       this.strafe = 0;
     }
