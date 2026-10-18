@@ -263,8 +263,20 @@ h1 {
     order: -1;
   }
 
-  .help span:first-child {
+  .help span:first-child,
+  .help .keys {
     display: none;
+  }
+
+  .help {
+    padding: 10px 12px;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .help button {
+    padding: 8px 12px;
   }
 
   .start-panel {
