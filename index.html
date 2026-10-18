@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Floresta — Bonecos Articulados</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <script>
+      if (location.protocol === "file:") location.replace("http://localhost:5173/");
+      setTimeout(() => {
+        if (document.documentElement.dataset.ready === "1") return;
+        const note = document.getElementById("boot-note");
+        if (!note) return;
+        note.hidden = false;
+        note.textContent = "A simulação não carregou. Abra http://localhost:5173 com o servidor ligado.";
+      }, 2000);
+    </script>
+  </head>
+  <body>
+    <div id="app" class="is-menu">
+      <canvas id="view" tabindex="0" aria-label="Floresta de combate 3D"></canvas>
+
+      <section id="start-screen" class="start-screen">
+        <p id="boot-note" hidden style="font-family: system-ui, sans-serif; padding: 16px"></p>
+        <div class="start-panel">
+          <p class="eyebrow">Floresta</p>
+          <h2>Bonecos articulados</h2>
+          <p>Nimbus e Brasa escolhem os golpes e lutam sozinhos entre as árvores. Nada começa antes do clique.</p>
+          <button type="button" id="start-btn">Começar simulação</button>
+        </div>
+      </section>
+
+      <header class="hud">
+        <section class="card" id="card-a">
+          <div class="card-top">
+            <h1 id="name-a">Nimbus</h1>
+            <span class="intent" id="intent-a">observando</span>
+          </div>
+          <div class="bar"><div class="bar-fill" id="hp-a"></div></div>
+          <p class="meta"><span id="score-a">0</span> rounds</p>
+        </section>
+
+        <section class="center">
+          <p class="round" id="round-label">Round 1</p>
+          <p class="banner" id="banner"></p>
+        </section>
+
+        <section class="card card-right" id="card-b">
+          <div class="card-top">
+            <span class="intent" id="intent-b">observando</span>
+            <h1 id="name-b">Brasa</h1>
+          </div>
+          <div class="bar"><div class="bar-fill" id="hp-b"></div></div>
+          <p class="meta">rounds <span id="score-b">0</span></p>
+        </section>
+      </header>
+
+      <aside class="feed" id="feed" aria-live="polite"></aside>
+
+      <footer class="help">
+        <span>Os bots escolhem o golpe, a finta, a esquiva e a defesa.</span>
+        <span class="keys">Arraste para ver de outro ângulo · Espaço pausa · R reinicia o round</span>
+        <button type="button" id="sound-btn">Som: ligado</button>
+      </footer>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

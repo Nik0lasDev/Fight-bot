@@ -1,0 +1,236 @@
+import * as THREE from "three";
+import { createArena, frameCamera, frameLight } from "./arena.js";
+import { createAudio } from "./audio.js";
+import { Bot, PROFILES } from "./fighter/bot.js";
+import { Fighter } from "./fighter/fighter.js";
+import { resolveHits, stayInRing, createImpact, updateImpacts, resolveBodies } from "./combat.js";
+import { avoidTrees, PLAY_RADIUS, resolveTrees } from "./forest.js";
+
+const canvas = document.querySelector("#view");
+const ui = {
+  hpA: document.querySelector("#hp-a"),
+  hpB: document.querySelector("#hp-b"),
+  intentA: document.querySelector("#intent-a"),
+  intentB: document.querySelector("#intent-b"),
+  scoreA: document.querySelector("#score-a"),
+  scoreB: document.querySelector("#score-b"),
+  round: document.querySelector("#round-label"),
+  banner: document.querySelector("#banner"),
+  feed: document.querySelector("#feed"),
+  sound: document.querySelector("#sound-btn"),
+  startScreen: document.querySelector("#start-screen"),
+  start: document.querySelector("#start-btn"),
+  app: document.querySelector("#app"),
+};
+
+const { renderer, scene, camera, controls, sun, trees } = createArena(canvas);
+const audio = createAudio();
+const impacts = [];
+
+const spawn = {
+  a: new THREE.Vector3(-0.4, 0, -4.2),
+  b: new THREE.Vector3(0.4, 0, 4.2),
+};
+
+const nimbus = new Fighter({ name: "Nimbus", color: 0x3ee0c5, position: spawn.a });
+const brasa = new Fighter({ name: "Brasa", color: 0xff6b4a, position: spawn.b });
+scene.add(nimbus.root, brasa.root);
+
+const botA = new Bot(nimbus, PROFILES.nimbus);
+const botB = new Bot(brasa, PROFILES.brasa);
+
+const match = {
+  scoreA: 0,
+  scoreB: 0,
+  round: 1,
+  phase: "menu",
+  timer: 0,
+  paused: false,
+  userOrbit: false,
+  orbitIdle: 0,
+};
+
+const feed = [];
+const clock = new THREE.Clock();
+
+controls.addEventListener("start", () => {
+  match.userOrbit = true;
+  match.orbitIdle = 6;
+});
+
+function pushFeed(text) {
+  feed.unshift(text);
+  feed.splice(6);
+  ui.feed.innerHTML = feed.map((line) => `<p>${line}</p>`).join("");
+}
+
+function showBanner(text) {
+  ui.banner.textContent = text;
+}
+
+function updateHud() {
+  ui.hpA.style.transform = `scaleX(${nimbus.health / 100})`;
+  ui.hpB.style.transform = `scaleX(${brasa.health / 100})`;
+  ui.intentA.textContent = botA.label;
+  ui.intentB.textContent = botB.label;
+  ui.scoreA.textContent = String(match.scoreA);
+  ui.scoreB.textContent = String(match.scoreB);
+  ui.round.textContent = match.scoreA >= 3 || match.scoreB >= 3 ? "Fim de luta" : `Round ${match.round}`;
+}
+
+function resetRound() {
+  nimbus.reset(spawn.a);
+  brasa.reset(spawn.b);
+  botA.reset();
+  botB.reset();
+  match.phase = "announce";
+  match.timer = 0.6;
+  showBanner(`Round ${match.round}`);
+  updateHud();
+}
+
+function startSimulation() {
+  ui.startScreen.hidden = true;
+  ui.app.classList.remove("is-menu");
+  audio.unlock();
+  match.paused = false;
+  match.scoreA = 0;
+  match.scoreB = 0;
+  match.round = 1;
+  feed.length = 0;
+  ui.feed.innerHTML = "";
+  resetRound();
+  canvas.focus();
+}
+
+function beginFight() {
+  match.phase = "fight";
+  showBanner("");
+}
+
+function onKnockout(winner, loser) {
+  match.phase = "ko";
+  match.timer = 3.1;
+  if (winner === nimbus) match.scoreA += 1;
+  else match.scoreB += 1;
+  audio.ko();
+  const finished = match.scoreA >= 3 || match.scoreB >= 3;
+  showBanner(finished ? `${winner.name} vence a luta` : `${winner.name} vence o round`);
+  pushFeed(`${winner.name} nocauteia ${loser.name}`);
+  updateHud();
+}
+
+function reportLosses(fighter) {
+  for (const label of fighter.takeLosses()) {
+    pushFeed(`${fighter.name} perde ${label}`);
+  }
+}
+
+function applyHit(hit) {
+  hit.defender.receiveHit(hit);
+  audio.hit(hit.blocked);
+  impacts.push(createImpact(scene, hit.point, hit.blocked ? 0xf2f2f2 : hit.attacker.color));
+  const where = hit.part === "head" ? "na cabeça" : hit.part === "chest" ? "no tronco" : "no corpo";
+  if (hit.blocked && hit.move.kind === "punch") {
+    pushFeed(`${hit.defender.name} bloqueia o ${hit.move.name}`);
+  } else if (hit.blocked) {
+    pushFeed(`${hit.attacker.name} acerta um ${hit.move.name} no bloqueio`);
+  } else {
+    pushFeed(`${hit.attacker.name} acerta um ${hit.move.name} ${where}`);
+  }
+  if (hit.defender.ko && match.phase === "fight") onKnockout(hit.attacker, hit.defender);
+}
+
+function updateMatch(dt) {
+  if (match.phase === "announce") {
+    match.timer -= dt;
+    if (match.timer <= 0) beginFight();
+    return;
+  }
+
+  if (match.phase === "ko") {
+    match.timer -= dt;
+    if (match.timer <= 0) {
+      if (match.scoreA >= 3 || match.scoreB >= 3) {
+        match.scoreA = 0;
+        match.scoreB = 0;
+        match.round = 1;
+      } else {
+        match.round += 1;
+      }
+      resetRound();
+    }
+  }
+}
+
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.033);
+  if (match.orbitIdle > 0) {
+    match.orbitIdle -= dt;
+    if (match.orbitIdle <= 0) match.userOrbit = false;
+  }
+
+  if (!match.paused) {
+    const fighting = match.phase === "fight" || match.phase === "ko";
+    if (fighting) {
+      botA.update(dt, brasa);
+      botB.update(dt, nimbus);
+    }
+    avoidTrees(nimbus, trees);
+    avoidTrees(brasa, trees);
+    nimbus.update(dt, brasa);
+    brasa.update(dt, nimbus);
+    reportLosses(nimbus);
+    reportLosses(brasa);
+    resolveBodies(nimbus, brasa);
+    resolveTrees(nimbus, trees);
+    resolveTrees(brasa, trees);
+    stayInRing(nimbus, PLAY_RADIUS);
+    stayInRing(brasa, PLAY_RADIUS);
+    resolveBodies(nimbus, brasa);
+    resolveTrees(nimbus, trees);
+    resolveTrees(brasa, trees);
+    if (match.phase === "fight") {
+      for (const hit of resolveHits(nimbus, brasa)) applyHit(hit);
+    }
+    updateImpacts(impacts, dt);
+    updateMatch(dt);
+  }
+
+  updateHud();
+
+  frameLight(sun, nimbus.root.position, brasa.root.position);
+  frameCamera(
+    controls,
+    camera,
+    nimbus.root.position,
+    brasa.root.position,
+    match.userOrbit,
+    dt,
+  );
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener("keydown", (event) => {
+  if (match.phase === "menu") return;
+  if (event.code === "Space") {
+    event.preventDefault();
+    match.paused = !match.paused;
+    showBanner(match.paused ? "Pausado" : match.phase === "fight" ? "" : ui.banner.textContent);
+  }
+  if (event.code === "KeyR") {
+    match.paused = false;
+    resetRound();
+  }
+});
+
+ui.sound.addEventListener("click", () => {
+  const enabled = audio.toggle();
+  ui.sound.textContent = enabled ? "Som: ligado" : "Som: desligado";
+});
+
+ui.start.addEventListener("click", startSimulation);
+canvas.addEventListener("pointerdown", () => audio.unlock());
+document.documentElement.dataset.ready = "1";
+requestAnimationFrame(tick);
