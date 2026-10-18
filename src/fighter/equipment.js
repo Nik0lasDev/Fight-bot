@@ -15,7 +15,7 @@ const item = (id, name, color, material, texture, skill, ability, stats) => ({
 
 export const EQUIPMENT_CATALOG = {
   helmet: [
-    item("iron", "Elmo de Ferro", "#8d9aa9", "Aço escovado", "Placas sobrepostas", "Casco firme", "Recebe 8% menos dano na cabeça", { defense: 0.08 }),
+    item("iron", "Elmo de Ferro", "#8d9aa9", "Aço escovado", "Placas sobrepostas", "Casco firme", "Recebe 8% menos dano", { defense: 0.08 }),
     item("ember", "Coroa das Brasas", "#d65b38", "Ferro vulcânico", "Fissuras incandescentes", "Fúria rubra", "Ataques causam 4% mais dano", { damage: 0.04 }),
     item("ranger", "Capuz do Batedor", "#5a9a75", "Couro reforçado", "Tecido tramado", "Passos leves", "Movimento 7% mais rápido", { speed: 0.07 }),
     item("arcane", "Elmo Rúnico", "#6f74d8", "Prata encantada", "Runas gravadas", "Pulso arcano", "Reduz atordoamento em 10%", { stunResist: 0.1 }),
