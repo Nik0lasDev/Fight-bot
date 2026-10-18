@@ -38,7 +38,7 @@
 - 🟠 **Brasa** — lutador coral.
 - 🌲 **Arena na floresta** — cenário 3D com câmera dinâmica.
 - 🧠 **Combate autônomo** — os bots escolhem golpes, fintas, esquivas e defesas.
-- ⚔️ **Armas medievais** — Nimbus empunha uma espada e Brasa uma clava; golpes armados têm alcance e dano próprios, e o sistema já suporta machados.
+- ⚔️ **Arsenal medieval no chão** — sete opções: espada, clava, machado, lança, adaga, martelo de guerra e machado duplo. Os bots escolhem armas disponíveis, caminham até elas e executam a animação de coleta com a mão; cada arma tem alcance e dano próprios.
 - ❤️ **HUD de combate** — vida, intenção dos bots, rounds e placar.
 - 🔊 **Áudio e efeitos** — feedback sonoro durante a luta.
 - 📱 **Câmera adaptável** — enquadramento ajustado para telas verticais e horizontais.
@@ -47,7 +47,7 @@
 - ♻️ **Renderização otimizada** — atualizações da interface limitadas a 10 vezes por segundo, buffers reutilizados e efeitos de impacto com recursos compartilhados.
 - 🌙 **Pausa em segundo plano** — a animação para quando a aba fica oculta, economizando processamento e bateria.
 
-> As armas são presas à mão direita dos lutadores e acompanham a animação dos braços. Cortes de espada e golpes de clava usam o ponto da arma para calcular o contato.
+> As armas começam espalhadas pela arena e são recolhidas pelos bots. A mão direita fecha os dedos e envolve a empunhadura; o tipo de arma selecionado altera alcance e dano. O arsenal reaparece a cada round.
 
 > O foco atual é uma simulação de combate entre bots. Não é necessário controlar cada lutador manualmente: dê início à luta e acompanhe as decisões deles.
 
