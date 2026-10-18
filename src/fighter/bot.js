@@ -128,6 +128,9 @@ export class Bot {
     if (!fighter.recentSerial || fighter.recentSerial === this.seenSerial) return;
     this.seenSerial = fighter.recentSerial;
     this.lastId = fighter.recentId;
+    // Re-evaluate immediately after every completed action, even if the
+    // opponent remains in the same distance band.
+    this.lastKey = "";
     if (MOVES[fighter.recentId]?.damage > 0) this.attackCooldown = 0.24;
     if (fighter.recentId === "feint") {
       this.followUp = this.profile.combo.feint || null;
