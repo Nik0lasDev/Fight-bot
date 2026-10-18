@@ -126,9 +126,18 @@ export class Bot {
       return;
     }
     fighter.blocking = false;
-    if (action.type === "strike" && fighter.tryMove(MOVES[action.id])) {
-      if (this.followUp === action.id) this.followUp = null;
-      return;
+    const move = MOVES[action.id];
+    if (action.type === "strike" && move) {
+      const weaponNames = { sword: "corte de espada", mace: "golpe de clava", axe: "golpe de machado" };
+      const armedLabel = move.limb === "handR" && weaponNames[fighter.skeleton.weaponType]
+        ? weaponNames[fighter.skeleton.weaponType]
+        : action.label;
+      this.plan = { ...action, label: armedLabel };
+      this.label = armedLabel;
+      if (fighter.tryMove(move)) {
+        if (this.followUp === action.id) this.followUp = null;
+        return;
+      }
     }
     if (action.type === "strike") {
       this.plan = { type: "go", throttle: 0.45, strafe: 0, label: "ajusta a distância" };
