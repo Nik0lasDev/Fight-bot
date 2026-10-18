@@ -18,18 +18,31 @@ export function stayInRing(fighter, radius) {
   const { x, z } = fighter.root.position;
   const distance = Math.hypot(x, z);
   if (distance <= radius) return;
-  const nx = x / distance;
-  const nz = z / distance;
+  const nx = x / (distance || 1);
+  const nz = z / (distance || 1);
   fighter.root.position.x = nx * radius;
   fighter.root.position.z = nz * radius;
+
+  // The arena edge behaves like a slightly soft barrier, not a teleporting wall.
   const outward = fighter.velocity.x * nx + fighter.velocity.z * nz;
   if (outward > 0) {
-    fighter.velocity.x -= outward * nx;
-    fighter.velocity.z -= outward * nz;
+    const restitution = fighter.ko ? 0.04 : 0.12;
+    fighter.velocity.x -= outward * (1 + restitution) * nx;
+    fighter.velocity.z -= outward * (1 + restitution) * nz;
+    const tangentX = fighter.velocity.x - (fighter.velocity.x * nx + fighter.velocity.z * nz) * nx;
+    const tangentZ = fighter.velocity.z - (fighter.velocity.x * nx + fighter.velocity.z * nz) * nz;
+    fighter.velocity.x -= tangentX * 0.08;
+    fighter.velocity.z -= tangentZ * 0.08;
   }
 }
 
 const BODY_GAP = 0.98;
+const CONTACT_SLOP = 0.015;
+
+function bodyInverseMass(fighter) {
+  const armor = Math.max(0, Math.min(0.5, fighter.equipmentStats?.defense || 0));
+  return 1 / (1 + armor * 0.8 + (fighter.ko ? 0.25 : 0));
+}
 
 export function resolveBodies(a, b) {
   const dx = b.root.position.x - a.root.position.x;
@@ -37,23 +50,47 @@ export function resolveBodies(a, b) {
   const distance = Math.hypot(dx, dz) || 0.0001;
   const nx = dx / distance;
   const nz = dz / distance;
-  if (distance < BODY_GAP) {
-    const overlap = BODY_GAP - distance;
-    a.root.position.x -= nx * overlap * 0.5;
-    a.root.position.z -= nz * overlap * 0.5;
-    b.root.position.x += nx * overlap * 0.5;
-    b.root.position.z += nz * overlap * 0.5;
-  } else if (distance > BODY_GAP + 0.04) {
-    return;
+  const overlap = BODY_GAP - distance;
+  if (overlap < -0.04) return;
+
+  const invA = bodyInverseMass(a);
+  const invB = bodyInverseMass(b);
+  const invTotal = invA + invB;
+
+  // Positional correction removes penetration without the old equal-split jitter.
+  if (overlap > CONTACT_SLOP) {
+    const correction = (overlap - CONTACT_SLOP) * 0.82 / invTotal;
+    a.root.position.x -= nx * correction * invA;
+    a.root.position.z -= nz * correction * invA;
+    b.root.position.x += nx * correction * invB;
+    b.root.position.z += nz * correction * invB;
   }
 
-  const rel = (b.velocity.x - a.velocity.x) * nx + (b.velocity.z - a.velocity.z) * nz;
-  if (rel < 0) {
-    const impulse = -rel * 0.5;
-    a.velocity.x -= impulse * nx;
-    a.velocity.z -= impulse * nz;
-    b.velocity.x += impulse * nx;
-    b.velocity.z += impulse * nz;
+  const relativeX = b.velocity.x - a.velocity.x;
+  const relativeZ = b.velocity.z - a.velocity.z;
+  const normalSpeed = relativeX * nx + relativeZ * nz;
+  if (normalSpeed >= 0) return;
+
+  // Small restitution gives body checks a little bounce while preserving momentum.
+  const restitution = Math.min(0.18, Math.abs(normalSpeed) * 0.035 + 0.04);
+  const normalImpulse = -(1 + restitution) * normalSpeed / invTotal;
+  a.velocity.x -= normalImpulse * invA * nx;
+  a.velocity.z -= normalImpulse * invA * nz;
+  b.velocity.x += normalImpulse * invB * nx;
+  b.velocity.z += normalImpulse * invB * nz;
+
+  // Coulomb-like tangential friction reduces sideways skating during contact.
+  const tangentX = relativeX - normalSpeed * nx;
+  const tangentZ = relativeZ - normalSpeed * nz;
+  const tangentSpeed = Math.hypot(tangentX, tangentZ);
+  if (tangentSpeed > 1e-5) {
+    const friction = Math.min(tangentSpeed / invTotal, normalImpulse * 0.32);
+    const tx = tangentX / tangentSpeed;
+    const tz = tangentZ / tangentSpeed;
+    a.velocity.x += friction * invA * tx;
+    a.velocity.z += friction * invA * tz;
+    b.velocity.x -= friction * invB * tx;
+    b.velocity.z -= friction * invB * tz;
   }
 }
 
