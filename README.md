@@ -41,6 +41,7 @@
 - ❤️ **HUD de combate** — vida, intenção dos bots, rounds e placar.
 - 🔊 **Áudio e efeitos** — feedback sonoro durante a luta.
 - 📱 **Câmera adaptável** — enquadramento ajustado para telas verticais e horizontais.
+- 🎛️ **Controles por toque** — botões na interface para pausar, retomar e iniciar uma revanche.
 - ⚡ **Qualidade gráfica adaptativa** — resolução interna e sombras ajustadas para reduzir a carga em dispositivos mais limitados.
 - ♻️ **Renderização otimizada** — atualizações da interface limitadas a 10 vezes por segundo, buffers reutilizados e efeitos de impacto com recursos compartilhados.
 - 🌙 **Pausa em segundo plano** — a animação para quando a aba fica oculta, economizando processamento e bateria.
@@ -123,7 +124,9 @@ Os arquivos gerados para distribuição ficam em `dist/`. Essa pasta é criada p
 | Clique em **Começar simulação** | Inicia uma nova luta |
 | Arrastar a cena | Girar a câmera para observar de outro ângulo |
 | `Espaço` | Pausar ou retomar a simulação |
-| `R` | Reiniciar o round |
+| Botão **Pausar / Retomar** | Controlar a simulação também em celulares |
+| `R` | Reiniciar o round; após o fim da luta, iniciar uma nova partida |
+| Botão **Nova luta** | Começar uma revanche depois da vitória |
 | Botão **Som** | Alternar o áudio |
 
 **Condição de vitória:** o primeiro lutador a alcançar **3 rounds** vence a luta.
@@ -198,7 +201,7 @@ npm run build
 
 O GitHub Actions executa essas verificações em pushes para `main` e em Pull Requests direcionados a `main`. Os testes cobrem utilitários matemáticos, interpolação de articulações, limites de pose e validação de membros.
 
-> A configuração de CI foi adicionada ao repositório. O resultado real do primeiro workflow deve ser conferido na aba **Actions** do GitHub; não estou afirmando que a compilação já passou até que o workflow termine.
+O workflow de qualidade está configurado para executar automaticamente no GitHub Actions em cada push para `main` e em Pull Requests direcionados a essa branch.
 
 ## 🧩 Solução de problemas
 
