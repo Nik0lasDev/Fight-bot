@@ -34,6 +34,7 @@ export class Fighter {
     this.standY = 0;
     this.move = null;
     this.moveTime = 0;
+    this.jointCommand = null;
     this.phase = "idle";
     this.didHit = false;
     this.blocking = false;
@@ -58,9 +59,19 @@ export class Fighter {
   }
 
   get isThreatening() {
+    if (this.jointCommand && !this.jointCommand.didHit && this.jointCommand.time < this.jointCommand.duration * 0.78 && !this.ko) return true;
     if (!this.move || this.ko) return false;
     if (this.phase !== "windup" && this.phase !== "active") return false;
     return this.move.damage > 0 || this.move.threat;
+  }
+
+  startJointMotion(command) {
+    if (!command?.targets || this.move || this.jointCommand || this.stun > 0 || this.ko || this.blocking) return false;
+    const part = bodyPart(command.limb);
+    if (part && this.missing.has(part)) return false;
+    this.jointCommand = { ...command, time: 0, didHit: false };
+    this.phase = "windup";
+    return true;
   }
 
   tryMove(move) {
@@ -106,6 +117,7 @@ export class Fighter {
     this.ko = false;
     this.koTime = 0;
     this.move = null;
+    this.jointCommand = null;
     this.phase = "idle";
     this.didHit = false;
     this.blocking = false;
@@ -142,6 +154,10 @@ export class Fighter {
     if (!this.ko) {
       this._face(opponent, dt);
       this._advanceMove(dt);
+      if (this.jointCommand) {
+        this.jointCommand.time += dt;
+        if (this.jointCommand.time >= this.jointCommand.duration) this.jointCommand = null;
+      }
       this._move(dt);
     } else {
       this.koTime += dt;
@@ -243,6 +259,19 @@ export class Fighter {
     if (this.stun > 0) return clampPose(flinchPose(this.flinchSide));
     if (opponent.ko) return clampPose(clonePose(VICTORY));
     if (this.move) return articulate(this.move, this.moveTime, distance, this.style);
+    if (this.jointCommand) {
+      const pose = clonePose(GUARD);
+      const t = Math.max(0, Math.min(1, this.jointCommand.time / this.jointCommand.duration));
+      const envelope = t < 0.42 ? t / 0.42 : Math.max(0, (1 - t) / 0.58);
+      const eased = envelope * envelope * (3 - 2 * envelope);
+      for (const [name, values] of Object.entries(this.jointCommand.targets)) {
+        if (!pose[name]) continue;
+        for (const axis of ["x", "y", "z"]) {
+          if (values[axis] !== undefined) pose[name][axis] += (values[axis] - pose[name][axis]) * eased;
+        }
+      }
+      return clampPose(pose);
+    }
     if (this.blocking) return holdPose("block", distance, this.style);
     const pose = clonePose(GUARD);
     addWalk(pose, this.walkPhase, this.planarSpeed);
