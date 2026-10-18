@@ -19,6 +19,8 @@ export class Skeleton {
     this.limbRoots = {};
     this.weaponType = weapon;
     this.fingerDigits = { L: [], R: [] };
+    this.handGrip = { L: 0, R: 0 };
+    this.gripStrength = 1;
     this.weaponOnGround = true;
     this.root = new THREE.Group();
     this.skin = new THREE.MeshStandardMaterial({
@@ -347,11 +349,11 @@ export class Skeleton {
   }
 
   gripWeapon(wrist, item) {
-    if (!wrist || !item?.mesh || !item.available) return;
+    if (!wrist || !item?.mesh || !item.available) return false;
     if (this.weapon && this.weapon !== item.mesh) this.weapon.removeFromParent();
     item.mesh.removeFromParent();
     wrist.add(item.mesh);
-    item.mesh.position.set(0, -0.018, 0.015);
+    item.mesh.position.set(0, -0.012, 0.005);
     item.mesh.rotation.set(0, 0, 0);
     this.weapon = item.mesh;
     this.weaponType = item.type;
@@ -359,16 +361,36 @@ export class Skeleton {
     this.weaponDamage = item.mesh.userData.stats.damage;
     this.anchors.weaponTip = item.mesh.userData.tip;
     this.weaponOnGround = false;
+    this.gripStrength = 0.72 + Math.random() * 0.28;
     item.available = false;
-    this.setHandGrip("R", true);
+    this.setHandGrip('R', true);
+    return true;
+  }
+
+  releaseWeapon(scene, facing = 0, velocity = null) {
+    if (!this.weapon || !scene || this.weaponOnGround) return null;
+    this.root.updateMatrixWorld(true);
+    const worldPosition = this.weapon.getWorldPosition(new THREE.Vector3());
+    const weapon = this.weapon;
+    weapon.removeFromParent();
+    scene.add(weapon);
+    weapon.position.set(worldPosition.x, 0.085, worldPosition.z);
+    weapon.rotation.set(Math.PI / 2, facing + (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.25);
+    weapon.userData.droppedVelocity = new THREE.Vector3((velocity?.x || 0) * 0.35 + (Math.random() - 0.5) * 1.4, 0, (velocity?.z || 0) * 0.35 + (Math.random() - 0.5) * 1.4);
+    this.weaponOnGround = true;
+    this.anchors.weaponTip = null;
+    this.setHandGrip('R', false);
+    return { mesh: weapon, type: this.weaponType, position: new THREE.Vector3(worldPosition.x, 0, worldPosition.z) };
   }
 
   setHandGrip(side, closed) {
-    for (const digit of this.fingerDigits[side] || []) {
-      digit.rotation.x = closed ? -0.75 : 0;
-      if (digit.userData.middle) digit.userData.middle.rotation.x = closed ? -1.05 : -0.55;
+    this.handGrip[side] = closed ? 1 : 0;
+    for (const [index, digit] of (this.fingerDigits[side] || []).entries()) {
+      const thumb = index === 4;
+      digit.rotation.x = closed ? (thumb ? -0.95 : -0.88) : (thumb ? -0.8 : 0);
+      if (digit.userData.middle) digit.userData.middle.rotation.x = closed ? -1.15 : -0.55;
     }
-    const hand = this.joints[`finger${side}`];
+    const hand = this.joints['finger' + side];
     if (hand) hand.rotation.x = closed ? -0.12 : 0;
   }
 
