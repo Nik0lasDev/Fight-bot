@@ -345,13 +345,20 @@ export class Skeleton {
     this.anchors.weaponTip.visible = true;
   }
 
-  gripWeapon(wrist) {
-    if (!this.weapon || !wrist || !this.weaponOnGround) return;
-    this.weapon.removeFromParent();
-    wrist.add(this.weapon);
-    this.weapon.position.set(0, -0.018, 0.015);
-    this.weapon.rotation.set(0, 0, 0);
+  gripWeapon(wrist, item) {
+    if (!wrist || !item?.mesh || !item.available) return;
+    if (this.weapon && this.weapon !== item.mesh) this.weapon.removeFromParent();
+    item.mesh.removeFromParent();
+    wrist.add(item.mesh);
+    item.mesh.position.set(0, -0.018, 0.015);
+    item.mesh.rotation.set(0, 0, 0);
+    this.weapon = item.mesh;
+    this.weaponType = item.type;
+    this.weaponReach = item.mesh.userData.stats.reach;
+    this.weaponDamage = item.mesh.userData.stats.damage;
+    this.anchors.weaponTip = item.mesh.userData.tip;
     this.weaponOnGround = false;
+    item.available = false;
     this.setHandGrip("R", true);
   }
 
