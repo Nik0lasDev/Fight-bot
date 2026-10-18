@@ -171,6 +171,14 @@ export class Skeleton {
     tip.name = "weaponTip";
     tip.position.set(type === "axe" ? -0.1 : 0, type === "sword" ? -0.74 : -0.62, 0);
     weapon.add(tip);
+    // Keep the same metadata contract for starting weapons and ground weapons.
+    weapon.userData.tip = tip;
+    weapon.userData.weaponType = type;
+    weapon.userData.stats = {
+      name: type,
+      reach: this.weaponReach,
+      damage: this.weaponDamage,
+    };
     this.anchors.weaponTip = tip;
     this.weapon = weapon;
     this.weaponType = type;
@@ -349,24 +357,29 @@ export class Skeleton {
   }
 
   gripWeapon(wrist, item) {
-    if (!wrist || !item?.mesh || !item.available) return false;
-    if (this.weapon && this.weapon !== item.mesh) this.weapon.removeFromParent();
-    item.mesh.removeFromParent();
-    wrist.add(item.mesh);
-    item.mesh.position.set(0, -0.012, 0.005);
-    item.mesh.rotation.set(0, 0, 0);
-    this.weapon = item.mesh;
-    this.weaponType = item.type || item.mesh.userData.weaponType || "sword";
-    const stats = item.mesh.userData.stats || {};
+    if (!wrist || !item?.mesh || !item.available || !item.mesh.isObject3D) return false;
+    const weapon = item.mesh;
+    const type = item.type || weapon.userData.weaponType || "sword";
+    const stats = weapon.userData.stats || {};
+    const tip = weapon.userData.tip || weapon.getObjectByName("weaponTip") || null;
+
+    // Attach only after all required references have been validated.
+    if (this.weapon && this.weapon !== weapon) this.weapon.removeFromParent();
+    weapon.removeFromParent();
+    wrist.add(weapon);
+    weapon.position.set(0, -0.012, 0.005);
+    weapon.rotation.set(0, 0, 0);
+    this.weapon = weapon;
+    this.weaponType = type;
     this.weaponReach = Number.isFinite(stats.reach) ? stats.reach : 0.6;
     this.weaponDamage = Number.isFinite(stats.damage) ? stats.damage : 1;
-    this.anchors.weaponTip = item.mesh.userData.tip || null;
-    // Clear any old ground-skid velocity so it cannot affect the held weapon.
-    delete item.mesh.userData.droppedVelocity;
+    this.anchors.weaponTip = tip;
+    // Clear stale ground movement before the weapon becomes attached to the hand.
+    delete weapon.userData.droppedVelocity;
     this.weaponOnGround = false;
     this.gripStrength = 0.72 + Math.random() * 0.28;
     item.available = false;
-    this.setHandGrip('R', true);
+    this.setHandGrip("R", true);
     return true;
   }
 
