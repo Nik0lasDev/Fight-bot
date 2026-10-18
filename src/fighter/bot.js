@@ -8,6 +8,7 @@ export class Bot {
     this.profile = profile;
     fighter.style = profile.weights;
     this.blockTimer = 0;
+    this.attackCooldown = 0;
     this.label = "lendo o combate";
     this.followUp = null;
     this.followTime = 0;
@@ -22,6 +23,7 @@ export class Bot {
   update(dt, opponent) {
     const fighter = this.fighter;
     this.blockTimer = Math.max(0, this.blockTimer - dt);
+    this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     if (this.followTime > 0) {
       this.followTime -= dt;
       if (this.followTime <= 0) this.followUp = null;
@@ -63,6 +65,13 @@ export class Bot {
       return;
     }
 
+    if (this.attackCooldown > 0) {
+      this.label = "recuperando após o golpe";
+      fighter.blocking = false;
+      fighter.setLocomotion(0, 0);
+      return;
+    }
+
     if (this.blockTimer > 0) {
       this.label = this.plan.label;
       fighter.blocking = true;
@@ -90,6 +99,7 @@ export class Bot {
 
   reset() {
     this.blockTimer = 0;
+    this.attackCooldown = 0;
     this.followUp = null;
     this.followTime = 0;
     this.justMissed = false;
@@ -112,6 +122,7 @@ export class Bot {
     if (!fighter.recentSerial || fighter.recentSerial === this.seenSerial) return;
     this.seenSerial = fighter.recentSerial;
     this.lastId = fighter.recentId;
+    if (MOVES[fighter.recentId]?.damage > 0) this.attackCooldown = 0.24;
     if (fighter.recentId === "feint") {
       this.followUp = this.profile.combo.feint || null;
       this.followTime = this.followUp ? 0.8 : 0;
