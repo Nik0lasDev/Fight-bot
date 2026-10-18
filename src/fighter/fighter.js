@@ -401,91 +401,59 @@ export class Fighter {
     if (this.hasWeapon || !this.weaponPickup.target || !this.weaponPickup.item) return;
     const pickup = this.weaponPickup;
     const target = pickup.target;
-    const dx = target.x - this.root.position.x;
-    const dz = target.z - this.root.position.z;
-    const distance = Math.hypot(dx, dz);
+    const distance = Math.hypot(target.x - this.root.position.x, target.z - this.root.position.z);
 
-    if (pickup.phase === "search" && distance < 0.56) {
+    if (pickup.phase === "search" && distance < 0.62) {
       pickup.phase = "reach";
       pickup.time = 0;
-      pickup.liftStartPosition = null;
-      pickup.liftStartQuaternion = null;
-      pickup.liftTime = 0;
       this.setLocomotion(0, 0);
-      this.velocity.x *= 0.12;
-      this.velocity.z *= 0.12;
+      this.velocity.x = 0;
+      this.velocity.z = 0;
+      this.skeleton.setHandGrip("R", false, 0);
     }
     if (pickup.phase !== "reach") return;
 
     pickup.time += dt;
-    // The item stays on the ground until the lowered hand reaches it.
-    // Lower the body and extend the hand toward the item, which stays on the ground.
-    const t = THREE.MathUtils.clamp(pickup.time / 2.25, 0, 1);
-    const shoulder = this.skeleton.joints.shoulderR;
-    const elbow = this.skeleton.joints.elbowR;
-    const wrist = this.skeleton.joints.wristR;
-    const fingers = this.skeleton.joints.fingerR;
-
-    // Keep the weapon visibly on the floor throughout the reach. The hand
-    // moves down first; only a real hand-to-item contact can attach it.
-    if (shoulder) {
-      shoulder.rotation.x = THREE.MathUtils.lerp(shoulder.rotation.x, -2.35, Math.min(1, dt * 9));
-      shoulder.rotation.z = THREE.MathUtils.lerp(shoulder.rotation.z, -0.08, Math.min(1, dt * 9));
-    }
-    if (elbow) elbow.rotation.x = THREE.MathUtils.lerp(elbow.rotation.x, -0.12, Math.min(1, dt * 9));
-    if (wrist) wrist.rotation.x = THREE.MathUtils.lerp(wrist.rotation.x, -0.12, Math.min(1, dt * 9));
-    if (fingers) fingers.rotation.x = THREE.MathUtils.lerp(fingers.rotation.x, -0.12, Math.min(1, dt * 9));
-    // Fingers curl progressively instead of snapping shut. The grip starts
-    // closing as the palm approaches the handle, then tightens at contact.
-    const gripProgress = THREE.MathUtils.smoothstep(t, 0.34, 0.78);
-    this.skeleton.setHandGrip("R", true, gripProgress);
-
-    this.root.updateMatrixWorld(true);
-    const palm = this.skeleton.joints.fingerR || wrist;
-    const handWorld = palm ? palm.getWorldPosition(_sole) : null;
-    const itemWorld = pickup.item.mesh?.getWorldPosition(new THREE.Vector3());
-    // Ground-weapon meshes have their origin at the center of the model, not
-    // at the handle. Full 3D distance therefore rejects valid reaches because
-    // the hand can be above the item's origin even when directly over the grip.
-    const horizontalDistance = handWorld && itemWorld
-      ? Math.hypot(handWorld.x - itemWorld.x, handWorld.z - itemWorld.z)
-      : Infinity;
-    const handHeight = handWorld ? handWorld.y : Infinity;
-    const contactTolerance = pickup.item.type === "spear" || pickup.item.type === "warhammer" ? 0.62 : 0.56;
-    const handIsLowEnough = handHeight <= 1.02;
-
-    // Require the hand to be near the item horizontally and low enough to
-    // reach it, rather than comparing against the mesh origin's arbitrary height.
-    if (horizontalDistance > contactTolerance || !handIsLowEnough) {
-      // Make small, continuous stance corrections while keeping the hand down.
-      // The timer deliberately does not reset, preventing an infinite crouch/stand loop.
-      if (pickup.time > 1.1) {
-        this.root.position.x += dx * Math.min(0.012, Math.abs(dx) * 0.035);
-        this.root.position.z += dz * Math.min(0.012, Math.abs(dz) * 0.035);
-      }
-      return;
-    }
-
-    // Contact reached: close the fingers around the handle, then attach it.
-    if (t < 0.68 || gripProgress < 0.8) return;
-    const wristJoint = this.skeleton.joints.wristR;
-    this.root.updateMatrixWorld(true);
-    let equipped = false;
-    try {
-      equipped = this.skeleton.gripWeapon(wristJoint, pickup.item);
-    } catch (error) {
-      console.error("Falha ao equipar arma; a luta continuará sem equipá-la.", error);
-      if (pickup.item) pickup.item.available = true;
-    }
-    this.hasWeapon = equipped;
-    pickup.phase = equipped ? "done" : "search";
-    if (!equipped) {
-      pickup.item = null;
-      pickup.target = null;
-      this.skeleton.setHandGrip("R", false);
-    }
     this.throttle = 0;
     this.strafe = 0;
+    this.velocity.x *= Math.exp(-12 * dt);
+    this.velocity.z *= Math.exp(-12 * dt);
+
+    // Keep the weapon fixed on the floor while the fighter lowers and reaches.
+    const t = THREE.MathUtils.clamp(pickup.time / 1.65, 0, 1);
+    const gripProgress = THREE.MathUtils.smoothstep(t, 0.48, 0.88);
+    this.skeleton.setHandGrip("R", true, gripProgress);
+
+    // Always leave the crouch state. Equip only if the reaching hand is nearby.
+    if (pickup.time >= 1.65) {
+      const item = pickup.item;
+      const wrist = this.skeleton.joints.wristR;
+      this.root.updateMatrixWorld(true);
+      const hand = this.skeleton.joints.fingerR.getWorldPosition(new THREE.Vector3());
+      const itemPosition = item.mesh.getWorldPosition(new THREE.Vector3());
+      const handDistance = Math.hypot(hand.x - itemPosition.x, hand.z - itemPosition.z);
+      const closeEnough = handDistance < 1.15 && hand.y < 1.4;
+      let equipped = false;
+      if (closeEnough) {
+        try {
+          equipped = this.skeleton.gripWeapon(wrist, item);
+        } catch (error) {
+          console.error("Falha ao concluir a pegada da arma.", error);
+        }
+      }
+      if (equipped) {
+        this.hasWeapon = true;
+        pickup.phase = "done";
+        pickup.item = null;
+        pickup.target = null;
+      } else {
+        pickup.phase = "search";
+        pickup.time = 0;
+        pickup.item = null;
+        pickup.target = null;
+        this.skeleton.setHandGrip("R", false, 0);
+      }
+    }
   }
 
   takeLosses() {
@@ -529,6 +497,11 @@ export class Fighter {
   }
 
   _plantFeet() {
+    if (!this.hasWeapon && this.weaponPickup.phase === "reach") {
+      this.root.position.y = 0;
+      this.standY = 0;
+      return;
+    }
     this.root.updateMatrixWorld(true);
     let lowest = Infinity;
     for (const name of ["footL", "footR", "toeTipL", "toeTipR"]) {
