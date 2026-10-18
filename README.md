@@ -23,6 +23,7 @@
     <img src="https://img.shields.io/badge/JavaScript-ES%20Modules-f7df1e?style=for-the-badge&logo=javascript&logoColor=111111" alt="JavaScript ES Modules" />
     <img src="https://img.shields.io/badge/3D-Three.js-ffffff?style=for-the-badge&logo=threedotjs&logoColor=111111" alt="Three.js" />
     <img src="https://img.shields.io/badge/Dev%20Server-Vite-8b5cf6?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+    <a href="https://github.com/Nik0lasDev/Fight-bot/actions/workflows/ci.yml"><img src="https://github.com/Nik0lasDev/Fight-bot/actions/workflows/ci.yml/badge.svg" alt="Quality checks" /></a>
     <img src="https://img.shields.io/badge/Idioma-Portugu%C3%AAs%20(BR)-009739?style=for-the-badge" alt="Português do Brasil" />
   </p>
 </div>
@@ -40,6 +41,9 @@
 - ❤️ **HUD de combate** — vida, intenção dos bots, rounds e placar.
 - 🔊 **Áudio e efeitos** — feedback sonoro durante a luta.
 - 📱 **Câmera adaptável** — enquadramento ajustado para telas verticais e horizontais.
+- ⚡ **Qualidade gráfica adaptativa** — resolução interna e sombras ajustadas para reduzir a carga em dispositivos mais limitados.
+- ♻️ **Renderização otimizada** — atualizações da interface limitadas a 10 vezes por segundo, buffers reutilizados e efeitos de impacto com recursos compartilhados.
+- 🌙 **Pausa em segundo plano** — a animação para quando a aba fica oculta, economizando processamento e bateria.
 
 > O foco atual é uma simulação de combate entre bots. Não é necessário controlar cada lutador manualmente: dê início à luta e acompanhe as decisões deles.
 
@@ -140,6 +144,12 @@ Os arquivos gerados para distribuição ficam em `dist/`. Essa pasta é criada p
 Fight-bot/
 ├── assets/
 │   └── fight-bot-banner.svg
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── tests/
+│   ├── math.test.js
+│   └── physics.test.js
 ├── src/
 │   ├── fighter/
 │   │   ├── bot.js          # Decisões e perfis dos bots
@@ -170,6 +180,25 @@ O roadmap abaixo é uma lista de ideias para evolução — não significa que t
 - [ ] Mais arenas e personagens
 - [ ] Melhorias de desempenho em dispositivos móveis
 - [ ] Publicação de uma demonstração online
+
+## 🧪 Testes e validação
+
+Execute os testes automatizados e a compilação de produção com um único comando:
+
+```bash
+npm run check
+```
+
+Ou execute cada etapa separadamente:
+
+```bash
+npm test
+npm run build
+```
+
+O GitHub Actions executa essas verificações em pushes para `main` e em Pull Requests direcionados a `main`. Os testes cobrem utilitários matemáticos, interpolação de articulações, limites de pose e validação de membros.
+
+> A configuração de CI foi adicionada ao repositório. O resultado real do primeiro workflow deve ser conferido na aba **Actions** do GitHub; não estou afirmando que a compilação já passou até que o workflow termine.
 
 ## 🧩 Solução de problemas
 
