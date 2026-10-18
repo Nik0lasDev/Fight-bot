@@ -99,7 +99,8 @@ function connect(attacker, defender) {
   const chipped = guardUp && breaksGuard;
 
   const weaponDamage = weaponStrike ? (attacker.skeleton.weaponDamage || 1.15) : 1;
-  let damage = move.damage * best.multiplier * weaponDamage;
+  const attackBonus = 1 + (attacker.equipmentStats?.damage || 0);
+  let damage = move.damage * best.multiplier * weaponDamage * attackBonus;
   let stun = move.stun;
   let force = move.force;
   if (blocked) {
@@ -112,6 +113,8 @@ function connect(attacker, defender) {
     force *= 0.6;
     defender.blocking = false;
   }
+
+  damage *= 1 - (defender.equipmentStats?.defense || 0);
 
   return {
     attacker,
