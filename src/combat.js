@@ -65,7 +65,7 @@ function connect(attacker, defender) {
   const part = bodyPart(move.limb);
   if (part && attacker.missing.has(part)) return null;
 
-  const weaponStrike = move.limb === "handR" && attacker.skeleton?.weapon;
+  const weaponStrike = move.limb === "handR" && attacker.hasWeapon && attacker.skeleton?.weapon;
   if (weaponStrike && attacker.skeleton.anchors.weaponTip) {
     attacker.anchorWorld("weaponTip", _strike);
   } else {
