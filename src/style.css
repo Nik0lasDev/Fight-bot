@@ -401,3 +401,21 @@ button:focus-visible {
   #start-btn { width:100%; }
 }
 @media (prefers-reduced-motion: reduce) { .equipment-option { transition:none; } }
+
+
+/* Illustrated equipment cards */
+.equipment-option { overflow:hidden; }
+.equipment-art {
+  display:block;
+  width:100%;
+  height:clamp(86px, 10vw, 124px);
+  margin:2px 0 10px;
+  border-radius:10px;
+  background:radial-gradient(ellipse at 50% 45%,rgba(131,163,190,.11),rgba(9,14,22,.08) 72%);
+}
+.equipment-option.is-selected .equipment-art {
+  background:radial-gradient(ellipse at 50% 45%,rgba(62,224,197,.16),rgba(9,14,22,.08) 72%);
+}
+@media (max-width:700px) {
+  .equipment-art { height:94px; }
+}
