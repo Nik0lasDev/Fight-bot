@@ -131,8 +131,44 @@ function connect(attacker, defender) {
   };
 }
 
+function connectJoint(attacker, defender) {
+  const command = attacker.jointCommand;
+  if (!command || command.didHit || defender.ko) return null;
+  const t = command.time / command.duration;
+  if (t < 0.3 || t > 0.76) return null;
+  const part = bodyPart(command.limb);
+  if (part && attacker.missing.has(part)) return null;
+  attacker.anchorWorld(command.limb, _strike);
+  let best = null;
+  for (const target of HURT) {
+    defender.anchorWorld(target.name, _hurt);
+    const distance = _strike.distanceTo(_hurt);
+    if (distance <= 0.34 + target.radius && (!best || distance < best.distance)) {
+      best = { ...target, distance, point: _hurt.clone() };
+    }
+  }
+  if (!best) return null;
+  command.didHit = true;
+  _push.set(defender.root.position.x - attacker.root.position.x, 0, defender.root.position.z - attacker.root.position.z);
+  if (_push.lengthSq() < 1e-6) _push.set(0, 0, 1);
+  _push.normalize();
+  defender.forward(_forward);
+  const facing = _forward.dot(_push.clone().multiplyScalar(-1));
+  const blocked = defender.blocking && facing > 0.25;
+  const damage = command.damage * best.multiplier * (blocked ? 0.12 : 1) * (1 - (defender.equipmentStats?.defense || 0));
+  return {
+    attacker, defender, damage,
+    stun: blocked ? 0 : command.stun,
+    force: command.force * (blocked ? 0.22 : 1),
+    direction: _push.clone(), blocked,
+    side: Math.random() < 0.5 ? -1 : 1,
+    point: best.point, part: best.name,
+    move: { id: "joint-motion", name: "movimento articular", kind: "free", limb: command.limb },
+  };
+}
+
 export function resolveHits(a, b) {
-  return [connect(a, b), connect(b, a)].filter(Boolean);
+  return [connect(a, b) || connectJoint(a, b), connect(b, a) || connectJoint(b, a)].filter(Boolean);
 }
 
 export function createImpact(scene, point, color) {
