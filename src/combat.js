@@ -75,7 +75,7 @@ function connect(attacker, defender) {
   for (const part of HURT) {
     defender.anchorWorld(part.name, _hurt);
     const distance = _strike.distanceTo(_hurt);
-    const weaponReach = weaponStrike ? 0.12 : 0;
+    const weaponReach = weaponStrike ? 0.12 + ((attacker.skeleton.weaponReach || 0.58) - 0.58) * 0.7 : 0;
     if (distance <= move.reach + weaponReach + part.radius && (!best || distance < best.distance)) {
       best = { ...part, distance, point: _hurt.clone() };
     }
