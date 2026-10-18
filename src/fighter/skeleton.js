@@ -367,7 +367,8 @@ export class Skeleton {
     if (this.weapon && this.weapon !== weapon) this.weapon.removeFromParent();
     weapon.removeFromParent();
     wrist.add(weapon);
-    weapon.position.set(0, -0.012, 0.005);
+    // Keep the handle inside the palm rather than floating above the fingers.
+    weapon.position.set(0, -0.045, 0.025);
     weapon.rotation.set(0, 0, 0);
     this.weapon = weapon;
     this.weaponType = type;
@@ -413,7 +414,10 @@ export class Skeleton {
       }
       // The thumb rotates inward across the palm, opposing the fingers around
       // the grip instead of curling in the same plane as every other digit.
-      if (thumb) digit.rotation.z = THREE.MathUtils.lerp(digit.userData.openZ ?? digit.rotation.z, -0.42, target);
+      if (thumb) {
+        if (digit.userData.openZ === undefined) digit.userData.openZ = digit.rotation.z;
+        digit.rotation.z = THREE.MathUtils.lerp(digit.userData.openZ, -0.42, target);
+      }
     }
     const hand = this.joints['finger' + side];
     if (hand) hand.rotation.x = THREE.MathUtils.lerp(0, -0.12, target);
