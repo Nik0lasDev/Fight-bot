@@ -339,7 +339,9 @@ export class Fighter {
     if (!this.hasWeapon && this.weaponPickup.phase === "reach" && this.weaponPickup.item) {
       // A staged pickup: lower the body first, then extend the arm, curl the
       // fingers around the grip, and finally rise with the item.
-      const t = THREE.MathUtils.clamp(this.weaponPickup.time / 1.35, 0, 1);
+      // Hold the crouched reach pose while searching for contact; never loop
+      // back to standing just because the hand missed on the first attempt.
+      const t = Math.min(0.72, THREE.MathUtils.clamp(this.weaponPickup.time / 1.35, 0, 1));
       const crouch = THREE.MathUtils.smoothstep(t, 0.02, 0.48);
       const reach = THREE.MathUtils.smoothstep(t, 0.22, 0.7);
       const lift = THREE.MathUtils.smoothstep(t, 0.7, 1);
@@ -413,7 +415,8 @@ export class Fighter {
     if (pickup.phase !== "reach") return;
 
     pickup.time += dt;
-    const t = Math.min(1, pickup.time / 1.35);
+    // Once the hand is fully extended, keep it there until pickup succeeds.
+    const t = Math.min(0.72, pickup.time / 1.35);
     const shoulder = this.skeleton.joints.shoulderR;
     const elbow = this.skeleton.joints.elbowR;
     const wrist = this.skeleton.joints.wristR;
@@ -445,11 +448,11 @@ export class Fighter {
     // Do not teleport the item to the hand at the end of a timer. Wait until
     // the palm reaches the handle zone and the fingers have started to close.
     if (contactDistance > contactTolerance) {
-      if (pickup.time > 2.8) {
-        // Reset the reach cycle so the bot can adjust its stance and try again.
-        pickup.time = 0.45;
-        this.root.position.x += dx * 0.08;
-        this.root.position.z += dz * 0.08;
+      // Make small, continuous stance corrections while keeping the hand down.
+      // The timer deliberately does not reset, preventing an infinite crouch/stand loop.
+      if (pickup.time > 1.1) {
+        this.root.position.x += dx * Math.min(0.012, Math.abs(dx) * 0.035);
+        this.root.position.z += dz * Math.min(0.012, Math.abs(dz) * 0.035);
       }
       return;
     }
