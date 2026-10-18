@@ -3,6 +3,7 @@ import { createArena, frameCamera, frameLight } from "./arena.js";
 import { createAudio } from "./audio.js";
 import { Bot, PROFILES } from "./fighter/bot.js";
 import { Fighter } from "./fighter/fighter.js";
+import { createGroundWeapon } from "./fighter/weapons.js";
 import { resolveHits, stayInRing, createImpact, updateImpacts, resolveBodies } from "./combat.js";
 import { avoidTrees, PLAY_RADIUS, resolveTrees } from "./forest.js";
 
@@ -38,13 +39,46 @@ const nimbus = new Fighter({ name: "Nimbus", color: 0x3ee0c5, position: spawn.a,
 const brasa = new Fighter({ name: "Brasa", color: 0xff6b4a, position: spawn.b, weapon: "mace" });
 scene.add(nimbus.root, brasa.root);
 
-// Each weapon starts physically on the arena floor, ahead of its owner.
-const nimbusWeaponPosition = new THREE.Vector3(-0.4, 0.045, -3.25);
-const brasaWeaponPosition = new THREE.Vector3(0.4, 0.045, 3.25);
-nimbus.weaponPickup.target = nimbusWeaponPosition.clone();
-brasa.weaponPickup.target = brasaWeaponPosition.clone();
-nimbus.skeleton.dropWeapon(scene, nimbusWeaponPosition, 0);
-brasa.skeleton.dropWeapon(scene, brasaWeaponPosition, Math.PI);
+// Seven medieval weapons are scattered across the arena for the bots to choose.
+const arsenalLayout = [
+  ["sword", -1.7, -3.15, 0.1],
+  ["mace", 1.5, 3.05, Math.PI],
+  ["axe", 1.45, -2.55, 0.35],
+  ["spear", -1.25, 2.55, Math.PI - 0.2],
+  ["dagger", -2.35, 0.05, 0.2],
+  ["warhammer", 2.25, -0.05, Math.PI - 0.25],
+  ["doubleaxe", 0, 1.15, 0.1],
+];
+let groundWeapons = [];
+function resetArsenal() {
+  for (const item of groundWeapons) item.mesh.removeFromParent();
+  groundWeapons = arsenalLayout.map(([type, x, z, rotation]) => createGroundWeapon(scene, type, x, z, rotation));
+  for (const fighter of [nimbus, brasa]) {
+    if (fighter.skeleton.weapon) fighter.skeleton.weapon.removeFromParent();
+    fighter.skeleton.weapon = null;
+    fighter.skeleton.anchors.weaponTip = null;
+    fighter.skeleton.weaponOnGround = true;
+    fighter.skeleton.weaponType = null;
+    fighter.skeleton.weaponDamage = 1;
+    fighter.skeleton.weaponReach = 0;
+    fighter.hasWeapon = false;
+    fighter.weaponPickup.phase = "search";
+    fighter.weaponPickup.time = 0;
+    fighter.weaponPickup.item = null;
+    fighter.weaponPickup.target = null;
+  }
+}
+function assignNearestWeapon(fighter) {
+  const available = groundWeapons.filter((item) => item.available);
+  if (!available.length) return;
+  available.sort((a, b) => a.position.distanceTo(fighter.root.position) - b.position.distanceTo(fighter.root.position));
+  const item = available[0];
+  fighter.weaponPickup.item = item;
+  fighter.weaponPickup.target = item.position;
+}
+resetArsenal();
+assignNearestWeapon(nimbus);
+assignNearestWeapon(brasa);
 
 const botA = new Bot(nimbus, PROFILES.nimbus);
 const botB = new Bot(brasa, PROFILES.brasa);
@@ -103,10 +137,9 @@ function resetRound() {
   ui.pause.textContent = "Pausar";
   nimbus.reset(spawn.a);
   brasa.reset(spawn.b);
-  nimbus.weaponPickup.target.copy(nimbusWeaponPosition);
-  brasa.weaponPickup.target.copy(brasaWeaponPosition);
-  nimbus.skeleton.dropWeapon(scene, nimbusWeaponPosition, 0);
-  brasa.skeleton.dropWeapon(scene, brasaWeaponPosition, Math.PI);
+  resetArsenal();
+  assignNearestWeapon(nimbus);
+  assignNearestWeapon(brasa);
   botA.reset();
   botB.reset();
   match.phase = "announce";
