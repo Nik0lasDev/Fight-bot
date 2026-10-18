@@ -101,6 +101,52 @@ function refreshEquipmentModels() {
   applyEquipment(brasa, loadouts.brasa);
 }
 
+function equipmentIllustration(slotId, entry) {
+  const id = entry.id;
+  const color = entry.color;
+  const dark = "#17202d";
+  const metal = "#dce7ef";
+  const accent = ["ember", "dragon", "inferno", "flame", "crusher"].includes(id) ? "#ffb05a"
+    : ["arcane", "crystal", "astral", "mystic"].includes(id) ? "#9cf4ff"
+    : ["royal", "duelist"].includes(id) ? "#ffe09a" : "#d4e2ec";
+  let silhouette = "";
+  if (slotId === "helmet") {
+    silhouette = `<path d="M43 65 Q42 29 80 23 Q118 29 117 65 L108 78 L52 78 Z" fill="url(#metal)"/><path d="M47 62 Q80 47 113 62 L111 74 L49 74 Z" fill="${color}"/><path d="M52 77 L108 77 L103 89 L57 89 Z" fill="${color}"/><path d="M59 61 L101 61 L97 68 L63 68 Z" fill="${dark}"/><path d="M80 25 L80 53" stroke="${accent}" stroke-width="4" stroke-linecap="round"/>`;
+    if (id === "ember") silhouette += `<path d="M52 39 L35 16 L64 30 M108 39 L125 16 L96 30" fill="${color}" stroke="${accent}" stroke-width="3" stroke-linejoin="round"/>`;
+    if (id === "ranger") silhouette += `<path d="M53 32 L80 8 L107 32 L98 39 L80 27 L62 39 Z" fill="${color}" stroke="${accent}" stroke-width="2"/>`;
+    if (id === "arcane") silhouette += `<path d="M80 13 L88 25 L80 37 L72 25 Z" fill="${accent}" stroke="#fff" stroke-width="1.5"/>`;
+  } else if (slotId === "chest") {
+    silhouette = `<path d="M56 26 L68 20 L80 31 L92 20 L104 26 L123 40 L110 57 L103 50 L107 91 Q80 103 53 91 L57 50 L50 57 L37 40 Z" fill="url(#metal)" stroke="${dark}" stroke-width="3" stroke-linejoin="round"/><path d="M58 32 L80 42 L102 32 L98 85 Q80 94 62 85 Z" fill="${color}" stroke="${accent}" stroke-width="2"/><path d="M80 40 L80 88 M63 54 L97 54 M61 69 L99 69" stroke="${accent}" stroke-width="3" opacity=".9"/><circle cx="80" cy="61" r="7" fill="${dark}" stroke="${accent}" stroke-width="3"/>`;
+    if (id === "dragon") silhouette += `<path d="M62 30 L51 16 L71 25 M98 30 L109 16 L89 25" fill="${color}" stroke="${accent}" stroke-width="3"/>`;
+  } else if (slotId === "legs") {
+    silhouette = `<path d="M48 24 Q80 32 112 24 L106 53 L100 91 L83 91 L80 57 L76 91 L59 91 L54 53 Z" fill="url(#metal)" stroke="${dark}" stroke-width="3" stroke-linejoin="round"/><path d="M53 31 L76 35 L72 53 L62 53 L65 84 L59 86 L54 52 Z M84 35 L107 31 L106 52 L95 86 L89 84 L91 53 L81 53 Z" fill="${color}" stroke="${accent}" stroke-width="2"/><path d="M76 36 L84 36 L83 53 L77 53 Z" fill="${accent}"/>`;
+  } else if (slotId === "boots") {
+    silhouette = `<path d="M54 24 L78 24 L79 58 L92 67 L112 72 Q121 77 116 88 L48 88 Q41 83 48 75 L57 64 Z" fill="url(#metal)" stroke="${dark}" stroke-width="3" stroke-linejoin="round"/><path d="M55 30 L76 30 L76 63 L91 72 L108 77 L108 82 L52 82 L54 74 L62 64 Z" fill="${color}" stroke="${accent}" stroke-width="2"/><path d="M56 43 L76 43 M56 51 L76 51 M56 59 L76 59" stroke="${accent}" stroke-width="3"/>`;
+    if (id === "crusher") silhouette += `<path d="M54 83 L62 91 L70 83 L78 91 L86 83 L94 91 L102 83" fill="none" stroke="${accent}" stroke-width="4"/>`;
+  } else if (slotId === "bracers") {
+    silhouette = `<path d="M60 20 Q80 13 100 20 L108 78 Q80 95 52 78 Z" fill="url(#metal)" stroke="${dark}" stroke-width="3"/><path d="M62 27 Q80 21 98 27 L102 74 Q80 86 58 74 Z" fill="${color}" stroke="${accent}" stroke-width="2"/><path d="M58 39 L102 39 M56 60 L104 60 M61 74 L99 74" stroke="${accent}" stroke-width="4"/>`;
+    if (id === "thorn") silhouette += `<path d="M60 34 L47 20 L68 28 M80 34 L80 13 L87 31 M100 34 L114 20 L93 28" fill="${color}" stroke="${accent}" stroke-width="3" stroke-linejoin="round"/>`;
+  } else {
+    silhouette = `<path d="M65 22 L78 29 L82 29 L95 22 L111 34 L103 48 L111 91 Q80 105 49 91 L57 48 L49 34 Z" fill="${color}" stroke="${dark}" stroke-width="3" stroke-linejoin="round"/><path d="M65 25 L80 36 L95 25 L101 43 L94 87 Q80 94 66 87 L59 43 Z" fill="url(#cloth)" stroke="${accent}" stroke-width="2"/><path d="M65 31 L80 42 L95 31 M61 48 L99 48 M59 66 L101 66 M58 83 L102 83" fill="none" stroke="${accent}" stroke-width="3" opacity=".95"/>`;
+    if (id === "royal") silhouette += `<path d="M69 40 L80 30 L91 40 L80 52 Z" fill="${accent}" stroke="#fff" stroke-width="1.5"/>`;
+    if (id === "forest") silhouette += `<path d="M80 51 Q61 39 65 31 Q80 34 80 51 Q95 35 99 31 Q102 45 80 51 Z" fill="${accent}"/>`;
+  }
+  const pattern = id === "arcane" || id === "astral" || id === "mystic"
+    ? `<circle cx="80" cy="58" r="34" fill="none" stroke="${accent}" stroke-width="1.5" stroke-dasharray="3 5" opacity=".75"/>`
+    : id === "shadow" || id === "night" ? `<path d="M36 35 L124 35 M32 48 L128 48 M36 61 L124 61" stroke="#fff" stroke-width="1" opacity=".18"/>`
+    : `<path d="M39 100 L121 100" stroke="${accent}" stroke-width="2" opacity=".5"/>`;
+  return `<svg class="equipment-art" viewBox="0 0 160 116" role="img" aria-label="${entry.name}, ${entry.material}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5fbff"/><stop offset=".35" stop-color="${color}"/><stop offset=".72" stop-color="${dark}"/><stop offset="1" stop-color="${color}"/></linearGradient>
+      <linearGradient id="cloth" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${accent}"/><stop offset=".35" stop-color="${color}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
+      <radialGradient id="glow"><stop stop-color="${color}" stop-opacity=".32"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>
+    </defs>
+    <ellipse cx="80" cy="63" rx="58" ry="48" fill="url(#glow)"/>
+    ${pattern}${silhouette}
+    <path d="M42 105 Q80 111 118 105" fill="none" stroke="#b8c7d8" stroke-width="1" opacity=".28"/>
+  </svg>`;
+}
+
 function renderEquipmentWorkshop() {
   const fighter = selectedFighter();
   const loadout = loadouts[activeFighterId];
@@ -125,7 +171,7 @@ function renderEquipmentWorkshop() {
   ui.equipmentOptions.innerHTML = options.map((entry) => {
     const active = loadout[activeEquipmentSlot] === entry.id;
     return `<button type="button" class="equipment-option ${active ? "is-selected" : ""}" data-item="${entry.id}" aria-pressed="${active}">
-      <span class="item-swatch" style="--item-color:${entry.color}"></span>
+      <span class="item-swatch" style="--item-color:${entry.color}"></span>\n      ${equipmentIllustration(activeEquipmentSlot, entry)}
       <span class="item-name">${entry.name}</span>
       <span class="item-material">${entry.material}</span>
       <span class="item-texture">${entry.texture}</span>
