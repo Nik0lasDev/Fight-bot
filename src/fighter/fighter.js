@@ -428,16 +428,23 @@ export class Fighter {
     if (elbow) elbow.rotation.x = THREE.MathUtils.lerp(elbow.rotation.x, -0.12, Math.min(1, dt * 9));
     if (wrist) wrist.rotation.x = THREE.MathUtils.lerp(wrist.rotation.x, -0.12, Math.min(1, dt * 9));
     if (fingers) fingers.rotation.x = THREE.MathUtils.lerp(fingers.rotation.x, -0.12, Math.min(1, dt * 9));
-    this.skeleton.setHandGrip("R", t > 0.48);
+    // Fingers curl progressively instead of snapping shut. The grip starts
+    // closing as the palm approaches the handle, then tightens at contact.
+    const gripProgress = THREE.MathUtils.smoothstep(t, 0.34, 0.78);
+    this.skeleton.setHandGrip("R", true, gripProgress);
 
     this.root.updateMatrixWorld(true);
-    const handWorld = wrist ? wrist.getWorldPosition(_sole) : null;
+    const palm = this.skeleton.joints.fingerR || wrist;
+    const handWorld = palm ? palm.getWorldPosition(_sole) : null;
     const itemWorld = pickup.item.mesh?.getWorldPosition(new THREE.Vector3());
     const contactDistance = handWorld && itemWorld ? handWorld.distanceTo(itemWorld) : Infinity;
+    // The weapon's model origin is its handle/grip reference. A small tolerance
+    // accounts for the palm volume and different handle lengths, not the blade.
+    const contactTolerance = pickup.item.type === "spear" || pickup.item.type === "warhammer" ? 0.48 : 0.44;
 
-    // Do not teleport the item to the hand at the end of a timer. Wait for the
-    // wrist to physically reach the item; if contact is missed, keep reaching.
-    if (contactDistance > 0.3) {
+    // Do not teleport the item to the hand at the end of a timer. Wait until
+    // the palm reaches the handle zone and the fingers have started to close.
+    if (contactDistance > contactTolerance) {
       if (pickup.time > 2.8) {
         // Reset the reach cycle so the bot can adjust its stance and try again.
         pickup.time = 0.45;
@@ -448,7 +455,7 @@ export class Fighter {
     }
 
     // Contact reached: close the fingers around the handle, then attach it.
-    if (t < 0.72) return;
+    if (t < 0.68 || gripProgress < 0.8) return;
     const wristJoint = this.skeleton.joints.wristR;
     this.root.updateMatrixWorld(true);
     let equipped = false;
