@@ -14,10 +14,10 @@ const _toOpponent = new THREE.Vector3();
 const _sole = new THREE.Vector3();
 
 export class Fighter {
-  constructor({ name, color, position }) {
+  constructor({ name, color, position, weapon = "sword" }) {
     this.name = name;
     this.color = color;
-    this.skeleton = new Skeleton(color);
+    this.skeleton = new Skeleton(color, weapon);
     this.root = this.skeleton.root;
     this.root.position.set(position.x, 0, position.z);
 
