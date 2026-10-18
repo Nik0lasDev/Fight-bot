@@ -56,30 +56,35 @@ export function limbReady(fighter, move) {
   return !part || !fighter.missing.has(part);
 }
 
-export function readLimbPose(joints) {
-  const pose = {};
+export function readLimbPose(joints, target = {}) {
   for (const name of CHECK) {
-    const joint = joints[name];
-    pose[name] = { x: joint.rotation.x, y: joint.rotation.y, z: joint.rotation.z };
+    const rotation = joints[name].rotation;
+    if (target[name]) {
+      target[name].x = rotation.x;
+      target[name].y = rotation.y;
+      target[name].z = rotation.z;
+    } else {
+      target[name] = { x: rotation.x, y: rotation.y, z: rotation.z };
+    }
   }
-  return pose;
+  return target;
 }
 
-export function condemnedLimbs(pose, previous, dt) {
-  const lost = [];
+export function condemnedLimbs(pose, previous, dt, output = []) {
+  output.length = 0;
   for (const joint of CHECK) {
     const rotation = pose[joint];
     if (!rotation) continue;
     const limb = LIMB_OF[joint];
-    if (lost.includes(limb)) continue;
+    if (output.includes(limb)) continue;
     if (outside(rotation, ROM[joint])) {
-      lost.push(limb);
+      output.push(limb);
       continue;
     }
     const prior = previous?.[joint];
     if (!prior || !(dt > 0.004)) continue;
     const speed = Math.hypot(rotation.x - prior.x, rotation.y - prior.y, rotation.z - prior.z) / dt;
-    if (speed > JOINT_SPEED[joint] * 1.8) lost.push(limb);
+    if (speed > JOINT_SPEED[joint] * 1.8) output.push(limb);
   }
-  return lost;
+  return output;
 }
