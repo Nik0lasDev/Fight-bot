@@ -11,11 +11,12 @@ const LENGTH = {
 const PELVIS_Y = 0.96;
 
 export class Skeleton {
-  constructor(color) {
+  constructor(color, weapon = "sword") {
     this.joints = {};
     this.anchors = {};
     this.accents = {};
     this.limbRoots = {};
+    this.weaponType = weapon;
     this.root = new THREE.Group();
     this.skin = new THREE.MeshStandardMaterial({
       color,
@@ -103,6 +104,70 @@ export class Skeleton {
     this._digit(hand, sign * 0.055, -0.02, -0.015, 0.05, 0.015, -0.8, sign * 0.55);
   }
 
+  _weapon(wrist, type) {
+    const weapon = new THREE.Group();
+    weapon.name = `medieval-${type}`;
+    weapon.position.set(0, -0.025, 0.035);
+    weapon.rotation.x = -0.12;
+    wrist.add(weapon);
+
+    const steel = new THREE.MeshStandardMaterial({
+      color: type === "sword" ? 0xd8e2ee : 0x9aa8b7,
+      metalness: 0.88,
+      roughness: 0.24,
+    });
+    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x3c4653, metalness: 0.72, roughness: 0.3 });
+    const grip = new THREE.MeshStandardMaterial({ color: 0x65442c, roughness: 0.86 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xb88b45, metalness: 0.72, roughness: 0.3 });
+
+    const add = (geometry, material, x, y, z, rotationZ = 0) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.z = rotationZ;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      weapon.add(mesh);
+      return mesh;
+    };
+
+    if (type === "sword") {
+      add(new THREE.CylinderGeometry(0.018, 0.028, 0.48, 6), steel, 0, -0.39, 0);
+      add(new THREE.BoxGeometry(0.19, 0.035, 0.055), gold, 0, -0.105, 0);
+      add(new THREE.CylinderGeometry(0.018, 0.018, 0.19, 8), grip, 0, -0.025, 0);
+      add(new THREE.SphereGeometry(0.035, 8, 6), gold, 0, 0.09, 0);
+      add(new THREE.ConeGeometry(0.027, 0.11, 6), steel, 0, -0.685, 0);
+      this.weaponReach = 0.66;
+      this.weaponDamage = 1.18;
+    } else if (type === "mace") {
+      add(new THREE.CylinderGeometry(0.018, 0.024, 0.38, 8), grip, 0, -0.23, 0);
+      add(new THREE.CylinderGeometry(0.055, 0.07, 0.16, 8), darkSteel, 0, -0.49, 0);
+      for (let i = 0; i < 6; i += 1) {
+        const angle = (i / 6) * Math.PI * 2;
+        add(new THREE.ConeGeometry(0.025, 0.09, 5), steel,
+          Math.cos(angle) * 0.065, -0.49, Math.sin(angle) * 0.065,
+          -angle);
+      }
+      add(new THREE.SphereGeometry(0.045, 8, 6), gold, 0, -0.59, 0);
+      this.weaponReach = 0.58;
+      this.weaponDamage = 1.32;
+    } else {
+      add(new THREE.CylinderGeometry(0.018, 0.023, 0.4, 8), grip, 0, -0.24, 0);
+      add(new THREE.BoxGeometry(0.23, 0.16, 0.055), steel, -0.09, -0.48, 0, -0.28);
+      add(new THREE.ConeGeometry(0.04, 0.16, 5), steel, 0.07, -0.49, 0, Math.PI);
+      add(new THREE.SphereGeometry(0.035, 8, 6), gold, 0, -0.46, 0);
+      this.weaponReach = 0.6;
+      this.weaponDamage = 1.26;
+    }
+
+    const tip = new THREE.Group();
+    tip.name = "weaponTip";
+    tip.position.set(type === "axe" ? -0.1 : 0, type === "sword" ? -0.74 : -0.62, 0);
+    weapon.add(tip);
+    this.anchors.weaponTip = tip;
+    this.weapon = weapon;
+    this.weaponType = type;
+  }
+
   _arm(chest, side, color) {
     const sign = side === "L" ? -1 : 1;
     const clavicle = this._joint(chest, `clavicle${side}`, sign * 0.08, 0.15, 0);
@@ -133,6 +198,7 @@ export class Skeleton {
     this.accents[`hand${side}`] = palmMaterial;
     this.anchors[`hand${side}`] = wrist;
     this._fingers(wrist, side, palmMaterial);
+    if (side === "R") this._weapon(wrist, this.weaponType);
   }
 
   _leg(pelvis, side, color) {
