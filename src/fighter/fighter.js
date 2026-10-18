@@ -18,7 +18,7 @@ export class Fighter {
     this.name = name;
     this.color = color;
     this.skeleton = new Skeleton(color, weapon);
-    this.weaponPickup = { phase: "search", time: 0, target: null };
+    this.weaponPickup = { phase: "search", time: 0, target: null, item: null };
     this.hasWeapon = false;
     this.root = this.skeleton.root;
     this.root.position.set(position.x, 0, position.z);
@@ -260,7 +260,7 @@ export class Fighter {
 
 
   _updateWeaponPickup(dt) {
-    if (this.hasWeapon || !this.weaponPickup.target) return;
+    if (this.hasWeapon || !this.weaponPickup.target || !this.weaponPickup.item) return;
     const pickup = this.weaponPickup;
     const target = pickup.target;
     const dx = target.x - this.root.position.x;
@@ -291,7 +291,7 @@ export class Fighter {
     if (pickup.time >= 0.95) {
       const wristJoint = this.skeleton.joints.wristR;
       this.root.updateMatrixWorld(true);
-      this.skeleton.gripWeapon(wristJoint);
+      this.skeleton.gripWeapon(wristJoint, pickup.item);
       this.hasWeapon = true;
       pickup.phase = "done";
       this.throttle = 0;
