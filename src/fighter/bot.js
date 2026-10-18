@@ -1,4 +1,5 @@
 import { distanceXZ } from "../math.js";
+import { MOVES } from "./moves.js";
 import { chooseAction, situationKey } from "./brain.js";
 
 export class Bot {
