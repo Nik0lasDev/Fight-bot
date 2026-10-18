@@ -347,6 +347,12 @@ function reportLosses(fighter) {
 
 function applyHit(hit) {
   hit.defender.receiveHit(hit);
+  // A clean hit from a sharp weapon severs an exposed limb at the contact point.
+  if (hit.cutLimb && !hit.blocked && !hit.defender.missing.has(hit.cutLimb)) {
+    hit.defender._loseLimb(hit.cutLimb);
+    const limbName = ({ armL: "braço esquerdo", armR: "braço direito", legL: "perna esquerda", legR: "perna direita" })[hit.cutLimb];
+    pushFeed(hit.attacker.name + " corta o " + limbName + " desprotegido de " + hit.defender.name + "!");
+  }
   audio.hit(hit.blocked);
   impacts.push(createImpact(scene, hit.point, hit.blocked ? 0xf2f2f2 : hit.attacker.color));
   const where = hit.part === "head" ? "na cabeça" : hit.part === "chest" ? "no tronco" : "no corpo";
