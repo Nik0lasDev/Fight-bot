@@ -3,10 +3,19 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createForest } from "./forest.js";
 
 export function createArena(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const smallScreen = window.matchMedia("(max-width: 800px)").matches;
+  const limitedCores = Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4;
+  const lowPower = smallScreen || limitedCores;
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: !lowPower,
+    powerPreference: "high-performance",
+    alpha: false,
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1.25 : 1.75));
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !lowPower;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -16,7 +25,7 @@ export function createArena(canvas) {
   scene.background = new THREE.Color(0x1c2822);
   scene.fog = new THREE.Fog(0x1c2822, 24, 72);
 
-  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 160);
+  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / Math.max(window.innerHeight, 1), 0.1, 160);
   camera.position.set(8, 6.5, 14);
 
   const controls = new OrbitControls(camera, canvas);
@@ -29,8 +38,8 @@ export function createArena(canvas) {
   scene.add(new THREE.HemisphereLight(0xc5d7c4, 0x3a2a18, 0.78));
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.15);
   sun.position.set(16, 24, 9);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.castShadow = renderer.shadowMap.enabled;
+  sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 2;
   sun.shadow.camera.far = 48;
   sun.shadow.camera.left = -16;
@@ -68,24 +77,22 @@ export function frameCamera(controls, camera, positionA, positionB, userOrbit, d
   if (_delta.lengthSq() < 1e-4) _delta.set(0, 0, 1);
   _delta.normalize();
   _side.set(-_delta.z, 0, _delta.x);
-  const cameraSide =
-    _side.x * (camera.position.x - _mid.x) + _side.z * (camera.position.z - _mid.z);
+  const cameraSide = _side.x * (camera.position.x - _mid.x) + _side.z * (camera.position.z - _mid.z);
   if (cameraSide < 0) _side.multiplyScalar(-1);
 
   const portrait = camera.aspect < 0.9;
   const distance = (portrait ? 13.2 : 11.8) + separation * 0.32;
   const eyeY = (portrait ? 8.6 : 7.6) + separation * 0.04;
-  _desired.set(
-    _mid.x + _side.x * distance,
-    eyeY,
-    _mid.z + _side.z * distance,
-  );
+  _desired.set(_mid.x + _side.x * distance, eyeY, _mid.z + _side.z * distance);
   _focus.set(_mid.x, 1.2, _mid.z);
 
   const follow = 1 - Math.exp(-2.8 * dt);
   controls.target.lerp(_focus, follow);
-  camera.fov = portrait ? 56 : 36;
-  camera.updateProjectionMatrix();
+  const fov = portrait ? 56 : 36;
+  if (camera.fov !== fov) {
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
   if (!userOrbit) camera.position.lerp(_desired, follow);
   controls.update();
 }
