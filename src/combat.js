@@ -5,6 +5,8 @@ const _strike = new THREE.Vector3();
 const _hurt = new THREE.Vector3();
 const _push = new THREE.Vector3();
 const _forward = new THREE.Vector3();
+const IMPACT_GEOMETRY = new THREE.SphereGeometry(0.045, 6, 6);
+const impactMaterials = new Map();
 
 const HURT = [
   { name: "head", radius: 0.2, multiplier: 1.25 },
@@ -126,10 +128,14 @@ export function resolveHits(a, b) {
 export function createImpact(scene, point, color) {
   const group = new THREE.Group();
   group.position.copy(point);
-  const material = new THREE.MeshBasicMaterial({ color });
-  const geometry = new THREE.SphereGeometry(0.045, 6, 6);
+  const key = Number(color);
+  let material = impactMaterials.get(key);
+  if (!material) {
+    material = new THREE.MeshBasicMaterial({ color });
+    impactMaterials.set(key, material);
+  }
   for (let i = 0; i < 8; i += 1) {
-    const piece = new THREE.Mesh(geometry, material);
+    const piece = new THREE.Mesh(IMPACT_GEOMETRY, material);
     piece.userData.velocity = new THREE.Vector3(
       (Math.random() - 0.5) * 3.2,
       Math.random() * 2.4,
@@ -138,7 +144,7 @@ export function createImpact(scene, point, color) {
     group.add(piece);
   }
   scene.add(group);
-  return { group, life: 0.32, material, geometry };
+  return { group, life: 0.32 };
 }
 
 export function updateImpacts(impacts, dt) {
@@ -150,9 +156,7 @@ export function updateImpacts(impacts, dt) {
       piece.userData.velocity.y -= 6 * dt;
     }
     if (impact.life <= 0) {
-      impact.group.parent.remove(impact.group);
-      impact.geometry.dispose();
-      impact.material.dispose();
+      impact.group.parent?.remove(impact.group);
       impacts.splice(i, 1);
     }
   }
