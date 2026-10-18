@@ -217,14 +217,19 @@ export class Fighter {
   }
 
   _face(opponent, dt) {
+    // During a pickup, orient the body toward the actual item rather than the
+    // opponent, otherwise the reaching hand can miss the weapon on the floor.
+    const pickupTarget = !this.hasWeapon && this.weaponPickup.target && this.weaponPickup.item
+      ? this.weaponPickup.target
+      : null;
     _toOpponent.set(
-      opponent.root.position.x - this.root.position.x,
+      (pickupTarget?.x ?? opponent.root.position.x) - this.root.position.x,
       0,
-      opponent.root.position.z - this.root.position.z,
+      (pickupTarget?.z ?? opponent.root.position.z) - this.root.position.z,
     );
     if (_toOpponent.lengthSq() < 1e-6) return;
     const yaw = Math.atan2(_toOpponent.x, _toOpponent.z);
-    this.root.rotation.y = dampAngle(this.root.rotation.y, yaw, 10, dt);
+    this.root.rotation.y = dampAngle(this.root.rotation.y, yaw, pickupTarget ? 14 : 10, dt);
   }
 
   _advanceMove(dt) {
@@ -331,6 +336,36 @@ export class Fighter {
     if (this.stun > 0) return clampPose(flinchPose(this.flinchSide));
     if (opponent.ko) return clampPose(clonePose(VICTORY));
     if (this.move) return articulate(this.move, this.moveTime, distance, this.style);
+    if (!this.hasWeapon && this.weaponPickup.phase === "reach" && this.weaponPickup.item) {
+      // A staged pickup: lower the body first, then extend the arm, curl the
+      // fingers around the grip, and finally rise with the item.
+      const t = THREE.MathUtils.clamp(this.weaponPickup.time / 1.35, 0, 1);
+      const crouch = THREE.MathUtils.smoothstep(t, 0.02, 0.48);
+      const reach = THREE.MathUtils.smoothstep(t, 0.22, 0.7);
+      const lift = THREE.MathUtils.smoothstep(t, 0.7, 1);
+      const pose = clonePose(GUARD);
+      pose.waist.x += 0.5 * crouch - 0.28 * lift;
+      pose.lumbar.x += 0.34 * crouch - 0.22 * lift;
+      pose.spine.x += 0.18 * crouch - 0.12 * lift;
+      pose.chest.x += 0.12 * crouch;
+      pose.head.x += -0.12 * crouch;
+      pose.hipL.x += -0.52 * crouch;
+      pose.hipR.x += -0.52 * crouch;
+      pose.kneeL.x += 0.92 * crouch;
+      pose.kneeR.x += 0.92 * crouch;
+      pose.ankleL.x += -0.32 * crouch;
+      pose.ankleR.x += -0.32 * crouch;
+      pose.shoulderR.x += -1.25 * reach + 0.72 * lift;
+      pose.shoulderR.z += 0.12 * reach;
+      pose.elbowR.x += -0.5 * reach + 0.18 * lift;
+      pose.wristR.x += -0.28 * reach;
+      pose.fingerR.x += -0.28 * THREE.MathUtils.smoothstep(t, 0.42, 0.68);
+      // The free arm counterbalances the torso while the right hand reaches down.
+      pose.shoulderL.x += -0.3 * crouch;
+      pose.shoulderL.z += 0.18 * crouch;
+      pose.elbowL.x += -0.2 * crouch;
+      return clampPose(pose);
+    }
     if (this.jointCommand) {
       const pose = clonePose(GUARD);
       const t = Math.max(0, Math.min(1, this.jointCommand.time / this.jointCommand.duration));
@@ -367,36 +402,26 @@ export class Fighter {
     const dx = target.x - this.root.position.x;
     const dz = target.z - this.root.position.z;
     const distance = Math.hypot(dx, dz);
-    if (pickup.phase === "search" && distance < 0.9) {
+    if (pickup.phase === "search" && distance < 0.56) {
       pickup.phase = "reach";
       pickup.time = 0;
       this.setLocomotion(0, 0);
-      this.velocity.x *= 0.25;
-      this.velocity.z *= 0.25;
+      this.velocity.x *= 0.18;
+      this.velocity.z *= 0.18;
     }
     if (pickup.phase !== "reach") return;
+
     pickup.time += dt;
-    const t = Math.min(1, pickup.time / 0.95);
-    const shoulder = this.skeleton.joints.shoulderR;
-    const elbow = this.skeleton.joints.elbowR;
-    const wrist = this.skeleton.joints.wristR;
-    const fingers = this.skeleton.joints.fingerR;
-    if (shoulder) {
-      shoulder.rotation.x = THREE.MathUtils.lerp(shoulder.rotation.x, -1.85, Math.min(1, dt * 7));
-      shoulder.rotation.z = THREE.MathUtils.lerp(shoulder.rotation.z, -0.25, Math.min(1, dt * 7));
-    }
-    if (elbow) elbow.rotation.x = THREE.MathUtils.lerp(elbow.rotation.x, -0.45, Math.min(1, dt * 7));
-    if (wrist) wrist.rotation.x = THREE.MathUtils.lerp(wrist.rotation.x, -0.45, Math.min(1, dt * 7));
-    if (fingers) fingers.rotation.x = THREE.MathUtils.lerp(fingers.rotation.x, -0.2, Math.min(1, dt * 7));
-    this.skeleton.setHandGrip("R", t > 0.42);
-    if (pickup.time >= 0.95) {
+    const t = Math.min(1, pickup.time / 1.35);
+    // Close the actual articulated fingers after the hand has reached the grip.
+    this.skeleton.setHandGrip("R", t > 0.48);
+    if (pickup.time >= 1.35) {
       const wristJoint = this.skeleton.joints.wristR;
       this.root.updateMatrixWorld(true);
       let equipped = false;
       try {
         equipped = this.skeleton.gripWeapon(wristJoint, pickup.item);
       } catch (error) {
-        // A malformed weapon must not stop the entire animation loop.
         console.error("Falha ao equipar arma; a luta continuará sem equipá-la.", error);
         if (pickup.item) pickup.item.available = true;
       }
