@@ -35,35 +35,18 @@ export const ROM = {
 };
 
 export const JOINT_SPEED = {
-  waist: 6,
-  lumbar: 6,
-  spine: 6,
-  ribs: 6,
-  chest: 6.5,
-  neck: 8,
-  nape: 8,
-  head: 8,
-  jaw: 5,
-  clavicleL: 7,
-  clavicleR: 7,
-  shoulderL: 14,
-  shoulderR: 14,
-  elbowL: 16,
-  elbowR: 16,
-  forearmL: 10,
-  forearmR: 10,
-  wristL: 12,
-  wristR: 12,
-  fingerL: 11,
-  fingerR: 11,
-  hipL: 11,
-  hipR: 11,
-  kneeL: 14,
-  kneeR: 14,
-  ankleL: 10,
-  ankleR: 10,
-  toeL: 8,
-  toeR: 8,
+  waist: 6, lumbar: 6, spine: 6, ribs: 6, chest: 6.5,
+  neck: 8, nape: 8, head: 8, jaw: 5,
+  clavicleL: 7, clavicleR: 7,
+  shoulderL: 14, shoulderR: 14,
+  elbowL: 16, elbowR: 16,
+  forearmL: 10, forearmR: 10,
+  wristL: 12, wristR: 12,
+  fingerL: 11, fingerR: 11,
+  hipL: 11, hipR: 11,
+  kneeL: 14, kneeR: 14,
+  ankleL: 10, ankleR: 10,
+  toeL: 8, toeR: 8,
 };
 
 const FLEX = ["waist", "lumbar", "spine", "ribs", "chest"];
@@ -108,13 +91,23 @@ export function clampPose(pose) {
   return pose;
 }
 
-export function stepJoint(current, target, speed, dt) {
-  const max = speed * dt;
+export function stepJoint(current, target, speed, dt, output = {}) {
   const dx = target.x - current.x;
   const dy = target.y - current.y;
   const dz = target.z - current.z;
   const length = Math.hypot(dx, dy, dz);
-  if (length <= max || length < 1e-8) return { x: target.x, y: target.y, z: target.z };
-  const scale = max / length;
-  return { x: current.x + dx * scale, y: current.y + dy * scale, z: current.z + dz * scale };
+  const maxStep = Math.max(0, speed * dt);
+
+  if (length <= maxStep || length < 1e-8) {
+    output.x = target.x;
+    output.y = target.y;
+    output.z = target.z;
+    return output;
+  }
+
+  const scale = maxStep / length;
+  output.x = current.x + dx * scale;
+  output.y = current.y + dy * scale;
+  output.z = current.z + dz * scale;
+  return output;
 }
