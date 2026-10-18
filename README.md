@@ -151,6 +151,8 @@ Fight-bot/
 │   └── workflows/
 │       └── ci.yml
 ├── tests/
+│   ├── ai.test.js
+│   ├── combat.test.js
 │   ├── math.test.js
 │   └── physics.test.js
 ├── src/
@@ -199,7 +201,7 @@ npm test
 npm run build
 ```
 
-O GitHub Actions executa essas verificações em pushes para `main` e em Pull Requests direcionados a `main`. Os testes cobrem utilitários matemáticos, interpolação de articulações, limites de pose e validação de membros.
+O GitHub Actions executa essas verificações em pushes para `main` e em Pull Requests direcionados a `main`. Os testes cobrem utilitários matemáticos, interpolação de articulações, limites de pose, validação de membros, catálogos de movimentos da IA, colisões e limites da arena.
 
 O workflow de qualidade está configurado para executar automaticamente no GitHub Actions em cada push para `main` e em Pull Requests direcionados a essa branch.
 
