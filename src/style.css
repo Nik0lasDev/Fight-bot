@@ -28,6 +28,7 @@ body,
   width: 100%;
   height: 100%;
   outline: none;
+  touch-action: none;
 }
 
 .hud {
@@ -181,6 +182,11 @@ h1 {
   background: rgba(255, 255, 255, 0.12);
 }
 
+button:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 3px;
+}
+
 .is-menu .hud,
 .is-menu .help,
 .is-menu .feed {
@@ -251,6 +257,44 @@ h1 {
 
 #start-btn:hover {
   filter: brightness(1.08);
+}
+
+@media (max-width: 480px) {
+  .hud {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .card {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  h1 {
+    font-size: 17px;
+  }
+
+  .intent {
+    font-size: 10px;
+  }
+
+  .meta {
+    font-size: 11px;
+  }
+
+  .bar {
+    height: 8px;
+  }
+
+  .banner {
+    min-height: 24px;
+    font-size: 20px;
+  }
+
+  .feed {
+    left: 12px;
+    bottom: 58px;
+  }
 }
 
 @media (max-width: 800px) {
