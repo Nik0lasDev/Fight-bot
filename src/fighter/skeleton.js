@@ -18,6 +18,8 @@ export class Skeleton {
     this.accents = {};
     this.limbRoots = {};
     this.weaponType = weapon;
+    this.fingerDigits = { L: [], R: [] };
+    this.weaponOnGround = true;
     this.root = new THREE.Group();
     this.skin = new THREE.MeshStandardMaterial({
       color,
@@ -100,9 +102,11 @@ export class Skeleton {
 
     const spread = [-0.036, -0.012, 0.012, 0.036];
     spread.forEach((offset, index) => {
-      this._digit(hand, offset, -0.06, 0.02, 0.062, 0.014, 0, offset * -1.4 + (index - 1.5) * 0.02);
+      const digit = this._digit(hand, offset, -0.06, 0.02, 0.062, 0.014, 0, offset * -1.4 + (index - 1.5) * 0.02);
+      this.fingerDigits[side].push(digit);
     });
-    this._digit(hand, sign * 0.055, -0.02, -0.015, 0.05, 0.015, -0.8, sign * 0.55);
+    const thumb = this._digit(hand, sign * 0.055, -0.02, -0.015, 0.05, 0.015, -0.8, sign * 0.55);
+    this.fingerDigits[side].push(thumb);
   }
 
   _weapon(wrist, type) {
@@ -167,6 +171,7 @@ export class Skeleton {
     this.anchors.weaponTip = tip;
     this.weapon = weapon;
     this.weaponType = type;
+    this.weaponGrip = grip;
   }
 
   _arm(chest, side, color) {
@@ -326,6 +331,37 @@ export class Skeleton {
     context.fillStyle = color;
     context.fillRect(6, 12, Math.max(0, 244 * health), 24);
     this.barTexture.needsUpdate = true;
+  }
+
+
+  dropWeapon(scene, worldPosition, facing = 0) {
+    if (!this.weapon || !scene) return;
+    this.root.updateMatrixWorld(true);
+    this.weapon.removeFromParent();
+    scene.add(this.weapon);
+    this.weapon.position.copy(worldPosition);
+    this.weapon.rotation.set(Math.PI / 2, facing, 0);
+    this.weaponOnGround = true;
+    this.anchors.weaponTip.visible = true;
+  }
+
+  gripWeapon(wrist) {
+    if (!this.weapon || !wrist || !this.weaponOnGround) return;
+    this.weapon.removeFromParent();
+    wrist.add(this.weapon);
+    this.weapon.position.set(0, -0.018, 0.015);
+    this.weapon.rotation.set(0, 0, 0);
+    this.weaponOnGround = false;
+    this.setHandGrip("R", true);
+  }
+
+  setHandGrip(side, closed) {
+    for (const digit of this.fingerDigits[side] || []) {
+      digit.rotation.x = closed ? -0.75 : 0;
+      if (digit.userData.middle) digit.userData.middle.rotation.x = closed ? -1.05 : -0.55;
+    }
+    const hand = this.joints[`finger${side}`];
+    if (hand) hand.rotation.x = closed ? -0.12 : 0;
   }
 
   anchorWorld(name, target) {
