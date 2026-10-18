@@ -440,14 +440,19 @@ export class Fighter {
     const palm = this.skeleton.joints.fingerR || wrist;
     const handWorld = palm ? palm.getWorldPosition(_sole) : null;
     const itemWorld = pickup.item.mesh?.getWorldPosition(new THREE.Vector3());
-    const contactDistance = handWorld && itemWorld ? handWorld.distanceTo(itemWorld) : Infinity;
-    // The weapon's model origin is its handle/grip reference. A small tolerance
-    // accounts for the palm volume and different handle lengths, not the blade.
-    const contactTolerance = pickup.item.type === "spear" || pickup.item.type === "warhammer" ? 0.48 : 0.44;
+    // Ground-weapon meshes have their origin at the center of the model, not
+    // at the handle. Full 3D distance therefore rejects valid reaches because
+    // the hand can be above the item's origin even when directly over the grip.
+    const horizontalDistance = handWorld && itemWorld
+      ? Math.hypot(handWorld.x - itemWorld.x, handWorld.z - itemWorld.z)
+      : Infinity;
+    const handHeight = handWorld ? handWorld.y : Infinity;
+    const contactTolerance = pickup.item.type === "spear" || pickup.item.type === "warhammer" ? 0.62 : 0.56;
+    const handIsLowEnough = handHeight <= 1.02;
 
-    // Do not teleport the item to the hand at the end of a timer. Wait until
-    // the palm reaches the handle zone and the fingers have started to close.
-    if (contactDistance > contactTolerance) {
+    // Require the hand to be near the item horizontally and low enough to
+    // reach it, rather than comparing against the mesh origin's arbitrary height.
+    if (horizontalDistance > contactTolerance || !handIsLowEnough) {
       // Make small, continuous stance corrections while keeping the hand down.
       // The timer deliberately does not reset, preventing an infinite crouch/stand loop.
       if (pickup.time > 1.1) {
