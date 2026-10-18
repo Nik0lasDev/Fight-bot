@@ -103,6 +103,10 @@ function resetRound() {
   ui.pause.textContent = "Pausar";
   nimbus.reset(spawn.a);
   brasa.reset(spawn.b);
+  nimbus.weaponPickup.target.copy(nimbusWeaponPosition);
+  brasa.weaponPickup.target.copy(brasaWeaponPosition);
+  nimbus.skeleton.dropWeapon(scene, nimbusWeaponPosition, 0);
+  brasa.skeleton.dropWeapon(scene, brasaWeaponPosition, Math.PI);
   botA.reset();
   botB.reset();
   match.phase = "announce";
