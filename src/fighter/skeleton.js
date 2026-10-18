@@ -87,6 +87,7 @@ export class Skeleton {
     middle.position.y = -length;
     middle.rotation.x = -0.55;
     root.add(middle);
+    root.userData.middle = middle;
     this._sphere(middle, radius * 1.05, this.jointMaterial);
     this._bone(middle, length * 0.72, radius * 0.82, this.skin);
     return root;
