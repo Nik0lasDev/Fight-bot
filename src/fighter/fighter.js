@@ -47,6 +47,7 @@ export class Fighter {
     this.planarSpeed = 0;
     this.walkPhase = Math.random() * Math.PI * 2;
     this.velocity = new THREE.Vector3();
+    this.bodyAngularVelocity = new THREE.Vector2();
     this.style = { punch: 1, kick: 1, knee: 1 };
     this.recentId = null;
     this.recentContact = null;
@@ -105,8 +106,12 @@ export class Fighter {
       this.phase = "idle";
       this.blocking = false;
     }
-    this.velocity.x += direction.x * force * 3.4;
-    this.velocity.z += direction.z * force * 3.4;
+    const impactMass = 1 + Math.max(0, Math.min(0.5, this.equipmentStats?.defense || 0)) * 0.8;
+    this.velocity.x += direction.x * force * 3.4 / impactMass;
+    this.velocity.z += direction.z * force * 3.4 / impactMass;
+    // Off-center hits add angular momentum, briefly tipping the body before it recovers.
+    this.bodyAngularVelocity.x += direction.z * force * 0.14;
+    this.bodyAngularVelocity.y += (-direction.x * force * 0.14) + side * force * 0.055;
     if (this.health <= 0) {
       this.ko = true;
       this.koTime = 0;
@@ -158,6 +163,7 @@ export class Fighter {
     this.throttle = 0;
     this.strafe = 0;
     this.velocity.set(0, 0, 0);
+    this.bodyAngularVelocity.set(0, 0);
     this.root.position.set(position.x, 0, position.z);
     this.root.rotation.set(0, 0, 0);
     this.missing.clear();
@@ -195,6 +201,7 @@ export class Fighter {
         if (this.jointCommand.time >= this.jointCommand.duration) this.jointCommand = null;
       }
       this._move(dt);
+      this._updateBodyBalance(dt);
     } else {
       this.koTime += dt;
       this.throttle = 0;
@@ -299,6 +306,15 @@ export class Fighter {
     this.root.position.z += this.velocity.z * dt;
     this.planarSpeed = Math.hypot(this.velocity.x, this.velocity.z);
     this.walkPhase += dt * (2.6 + this.planarSpeed * 1.7);
+  }
+
+  _updateBodyBalance(dt) {
+    const spring = 16;
+    const damping = 5.2;
+    this.bodyAngularVelocity.x += (-this.root.rotation.x * spring - this.bodyAngularVelocity.x * damping) * dt;
+    this.bodyAngularVelocity.y += (-this.root.rotation.z * spring - this.bodyAngularVelocity.y * damping) * dt;
+    this.root.rotation.x = THREE.MathUtils.clamp(this.root.rotation.x + this.bodyAngularVelocity.x * dt, -0.24, 0.24);
+    this.root.rotation.z = THREE.MathUtils.clamp(this.root.rotation.z + this.bodyAngularVelocity.y * dt, -0.24, 0.24);
   }
 
   _distanceTo(opponent) {
