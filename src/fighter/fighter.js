@@ -18,8 +18,13 @@ export class Fighter {
     this.name = name;
     this.color = color;
     this.skeleton = new Skeleton(color, weapon);
+    this.weaponPickup = { phase: "search", time: 0, target: null };
+    this.hasWeapon = false;
     this.root = this.skeleton.root;
     this.root.position.set(position.x, 0, position.z);
+    this.hasWeapon = false;
+    this.weaponPickup.phase = "search";
+    this.weaponPickup.time = 0;
 
     this.health = 100;
     this.maxHealth = 100;
@@ -145,6 +150,7 @@ export class Fighter {
     }
 
     this._applyPose(dt, opponent);
+    this._updateWeaponPickup(dt);
     if (!this.ko) this._plantFeet();
     else this._fall();
 
@@ -250,6 +256,47 @@ export class Fighter {
     pose.fingerL.x += Math.sin(this.walkPhase * 0.9) * 0.08;
     pose.fingerR.x += Math.sin(this.walkPhase * 0.9 + 0.7) * 0.08;
     return clampPose(pose);
+  }
+
+
+  _updateWeaponPickup(dt) {
+    if (this.hasWeapon || !this.weaponPickup.target) return;
+    const pickup = this.weaponPickup;
+    const target = pickup.target;
+    const dx = target.x - this.root.position.x;
+    const dz = target.z - this.root.position.z;
+    const distance = Math.hypot(dx, dz);
+    if (pickup.phase === "search" && distance < 0.9) {
+      pickup.phase = "reach";
+      pickup.time = 0;
+      this.setLocomotion(0, 0);
+      this.velocity.x *= 0.25;
+      this.velocity.z *= 0.25;
+    }
+    if (pickup.phase !== "reach") return;
+    pickup.time += dt;
+    const t = Math.min(1, pickup.time / 0.95);
+    const shoulder = this.skeleton.joints.shoulderR;
+    const elbow = this.skeleton.joints.elbowR;
+    const wrist = this.skeleton.joints.wristR;
+    const fingers = this.skeleton.joints.fingerR;
+    if (shoulder) {
+      shoulder.rotation.x = THREE.MathUtils.lerp(shoulder.rotation.x, -1.85, Math.min(1, dt * 7));
+      shoulder.rotation.z = THREE.MathUtils.lerp(shoulder.rotation.z, -0.25, Math.min(1, dt * 7));
+    }
+    if (elbow) elbow.rotation.x = THREE.MathUtils.lerp(elbow.rotation.x, -0.45, Math.min(1, dt * 7));
+    if (wrist) wrist.rotation.x = THREE.MathUtils.lerp(wrist.rotation.x, -0.45, Math.min(1, dt * 7));
+    if (fingers) fingers.rotation.x = THREE.MathUtils.lerp(fingers.rotation.x, -0.2, Math.min(1, dt * 7));
+    this.skeleton.setHandGrip("R", t > 0.42);
+    if (pickup.time >= 0.95) {
+      const wristJoint = this.skeleton.joints.wristR;
+      this.root.updateMatrixWorld(true);
+      this.skeleton.gripWeapon(wristJoint);
+      this.hasWeapon = true;
+      pickup.phase = "done";
+      this.throttle = 0;
+      this.strafe = 0;
+    }
   }
 
   takeLosses() {
