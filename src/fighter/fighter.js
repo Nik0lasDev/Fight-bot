@@ -341,7 +341,7 @@ export class Fighter {
       // fingers around the grip, and finally rise with the item.
       // Hold the crouched reach pose while searching for contact; never loop
       // back to standing just because the hand missed on the first attempt.
-      const t = THREE.MathUtils.clamp(this.weaponPickup.time / 1.65, 0, 1);
+      const t = THREE.MathUtils.clamp(this.weaponPickup.time / 2.25, 0, 1);
       const crouch = THREE.MathUtils.smoothstep(t, 0.02, 0.48);
       const reach = THREE.MathUtils.smoothstep(t, 0.22, 0.7);
       const lift = THREE.MathUtils.smoothstep(t, 0.7, 1);
@@ -408,6 +408,9 @@ export class Fighter {
     if (pickup.phase === "search" && distance < 0.56) {
       pickup.phase = "reach";
       pickup.time = 0;
+      pickup.liftStartPosition = null;
+      pickup.liftStartQuaternion = null;
+      pickup.liftTime = 0;
       this.setLocomotion(0, 0);
       this.velocity.x *= 0.12;
       this.velocity.z *= 0.12;
@@ -415,29 +418,46 @@ export class Fighter {
     if (pickup.phase !== "reach") return;
 
     pickup.time += dt;
-    // Never leave the fighter trapped in a crouch if the procedural hand pose
-    // cannot geometrically touch the weapon mesh. After a real reach animation,
-    // attach only when the fighter is still close to the ground item.
-    if (pickup.time >= 1.65 && distance <= 0.9) {
+    // Lift the weapon visibly from the floor into the palm; do not snap it.
+    if (pickup.time >= 1.7) {
+      const weapon = pickup.item.mesh;
+      const wristJoint = this.skeleton.joints.wristR;
+      if (!weapon || !wristJoint) return;
+      if (!pickup.liftStartPosition) {
+        this.root.updateMatrixWorld(true);
+        weapon.updateMatrixWorld(true);
+        pickup.liftStartPosition = weapon.getWorldPosition(new THREE.Vector3());
+        pickup.liftStartQuaternion = weapon.getWorldQuaternion(new THREE.Quaternion());
+        pickup.liftTime = 0;
+      }
+      pickup.liftTime += dt;
+      const progress = THREE.MathUtils.smoothstep(pickup.liftTime, 0, 0.72);
       this.root.updateMatrixWorld(true);
-      let equipped = false;
-      try {
-        equipped = this.skeleton.gripWeapon(this.skeleton.joints.wristR, pickup.item);
-      } catch (error) {
-        console.error("Falha ao equipar arma durante a recuperação da pegada.", error);
-        if (pickup.item) pickup.item.available = true;
+      const targetPosition = wristJoint.localToWorld(new THREE.Vector3(0, -0.045, 0.025));
+      const targetQuaternion = wristJoint.getWorldQuaternion(new THREE.Quaternion());
+      weapon.position.copy(pickup.liftStartPosition).lerp(targetPosition, progress);
+      weapon.quaternion.copy(pickup.liftStartQuaternion).slerp(targetQuaternion, progress);
+      if (pickup.liftTime >= 0.72) {
+        let equipped = false;
+        try { equipped = this.skeleton.gripWeapon(wristJoint, pickup.item); }
+        catch (error) {
+          console.error('Falha ao concluir a pegada da arma.', error);
+          if (pickup.item) pickup.item.available = true;
+        }
+        if (equipped) {
+          this.hasWeapon = true;
+          pickup.phase = 'done';
+          pickup.liftStartPosition = null;
+          pickup.liftStartQuaternion = null;
+          this.throttle = 0;
+          this.strafe = 0;
+          return;
+        }
       }
-      if (equipped) {
-        this.hasWeapon = true;
-        pickup.phase = "done";
-        this.throttle = 0;
-        this.strafe = 0;
-        return;
-      }
+      return;
     }
-    // The reach now progresses all the way back to standing instead of being
-    // capped at 72%, which previously kept the knees bent indefinitely.
-    const t = THREE.MathUtils.clamp(pickup.time / 1.65, 0, 1);
+    // Before lifting, let the character lower their body and extend the arm.
+    const t = THREE.MathUtils.clamp(pickup.time / 2.25, 0, 1);
     const shoulder = this.skeleton.joints.shoulderR;
     const elbow = this.skeleton.joints.elbowR;
     const wrist = this.skeleton.joints.wristR;
