@@ -399,15 +399,24 @@ export class Skeleton {
     return { mesh: weapon, type: this.weaponType, position: new THREE.Vector3(worldPosition.x, 0, worldPosition.z) };
   }
 
-  setHandGrip(side, closed) {
-    this.handGrip[side] = closed ? 1 : 0;
+  setHandGrip(side, closed, amount = closed ? 1 : 0) {
+    // Accept a continuous amount so fingers can wrap around a handle naturally.
+    const target = THREE.MathUtils.clamp(amount, 0, 1);
+    this.handGrip[side] = target;
     for (const [index, digit] of (this.fingerDigits[side] || []).entries()) {
       const thumb = index === 4;
-      digit.rotation.x = closed ? (thumb ? -0.95 : -0.88) : (thumb ? -0.8 : 0);
-      if (digit.userData.middle) digit.userData.middle.rotation.x = closed ? -1.15 : -0.55;
+      const openAngle = thumb ? -0.8 : 0;
+      const closedAngle = thumb ? -1.12 : -0.98;
+      digit.rotation.x = THREE.MathUtils.lerp(openAngle, closedAngle, target);
+      if (digit.userData.middle) {
+        digit.userData.middle.rotation.x = THREE.MathUtils.lerp(-0.55, -1.28, target);
+      }
+      // The thumb rotates inward across the palm, opposing the fingers around
+      // the grip instead of curling in the same plane as every other digit.
+      if (thumb) digit.rotation.z = THREE.MathUtils.lerp(digit.userData.openZ ?? digit.rotation.z, -0.42, target);
     }
     const hand = this.joints['finger' + side];
-    if (hand) hand.rotation.x = closed ? -0.12 : 0;
+    if (hand) hand.rotation.x = THREE.MathUtils.lerp(0, -0.12, target);
   }
 
   anchorWorld(name, target) {
