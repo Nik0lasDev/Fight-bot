@@ -52,16 +52,24 @@ const match = {
 
 const feed = [];
 const clock = new THREE.Clock();
+const HUD_INTERVAL = 0.1;
+let hudElapsed = 0;
+let animationFrame = 0;
 
 controls.addEventListener("start", () => {
   match.userOrbit = true;
   match.orbitIdle = 6;
 });
 
-function pushFeed(text) {
-  feed.unshift(text);
-  feed.splice(6);
-  ui.feed.innerHTML = feed.map((line) => `<p>${line}</p>`).join("");
+function pushFeed(message) {
+  feed.unshift(message);
+  feed.length = Math.min(feed.length, 6);
+  const entries = feed.map((line) => {
+    const item = document.createElement("p");
+    item.textContent = line;
+    return item;
+  });
+  ui.feed.replaceChildren(...entries);
 }
 
 function showBanner(text) {
@@ -69,8 +77,8 @@ function showBanner(text) {
 }
 
 function updateHud() {
-  ui.hpA.style.transform = `scaleX(${nimbus.health / 100})`;
-  ui.hpB.style.transform = `scaleX(${brasa.health / 100})`;
+  ui.hpA.style.transform = `scaleX(${nimbus.health / nimbus.maxHealth})`;
+  ui.hpB.style.transform = `scaleX(${brasa.health / brasa.maxHealth})`;
   ui.intentA.textContent = botA.label;
   ui.intentB.textContent = botB.label;
   ui.scoreA.textContent = String(match.scoreA);
@@ -98,7 +106,7 @@ function startSimulation() {
   match.scoreB = 0;
   match.round = 1;
   feed.length = 0;
-  ui.feed.innerHTML = "";
+  ui.feed.replaceChildren();
   resetRound();
   canvas.focus();
 }
@@ -111,6 +119,10 @@ function beginFight() {
 function onKnockout(winner, loser) {
   match.phase = "ko";
   match.timer = 3.1;
+  winner.setLocomotion(0, 0);
+  loser.setLocomotion(0, 0);
+  winner.blocking = false;
+  loser.blocking = false;
   if (winner === nimbus) match.scoreA += 1;
   else match.scoreB += 1;
   audio.ko();
@@ -164,24 +176,27 @@ function updateMatch(dt) {
 }
 
 function tick() {
+  animationFrame = 0;
   const dt = Math.min(clock.getDelta(), 0.033);
+
   if (match.orbitIdle > 0) {
     match.orbitIdle -= dt;
     if (match.orbitIdle <= 0) match.userOrbit = false;
   }
 
   if (!match.paused) {
-    const fighting = match.phase === "fight" || match.phase === "ko";
-    if (fighting) {
+    if (match.phase === "fight") {
       botA.update(dt, brasa);
       botB.update(dt, nimbus);
     }
+
     avoidTrees(nimbus, trees);
     avoidTrees(brasa, trees);
     nimbus.update(dt, brasa);
     brasa.update(dt, nimbus);
     reportLosses(nimbus);
     reportLosses(brasa);
+
     resolveBodies(nimbus, brasa);
     resolveTrees(nimbus, trees);
     resolveTrees(brasa, trees);
@@ -190,6 +205,7 @@ function tick() {
     resolveBodies(nimbus, brasa);
     resolveTrees(nimbus, trees);
     resolveTrees(brasa, trees);
+
     if (match.phase === "fight") {
       for (const hit of resolveHits(nimbus, brasa)) applyHit(hit);
     }
@@ -197,23 +213,23 @@ function tick() {
     updateMatch(dt);
   }
 
-  updateHud();
+  hudElapsed += dt;
+  if (hudElapsed >= HUD_INTERVAL) {
+    hudElapsed %= HUD_INTERVAL;
+    updateHud();
+  }
 
   frameLight(sun, nimbus.root.position, brasa.root.position);
-  frameCamera(
-    controls,
-    camera,
-    nimbus.root.position,
-    brasa.root.position,
-    match.userOrbit,
-    dt,
-  );
+  frameCamera(controls, camera, nimbus.root.position, brasa.root.position, match.userOrbit, dt);
   renderer.render(scene, camera);
-  requestAnimationFrame(tick);
+
+  if (!document.hidden) animationFrame = requestAnimationFrame(tick);
 }
 
 window.addEventListener("keydown", (event) => {
   if (match.phase === "menu") return;
+  if (event.target instanceof HTMLElement && event.target.closest("button, input, textarea, select, [contenteditable='true']")) return;
+
   if (event.code === "Space") {
     event.preventDefault();
     match.paused = !match.paused;
@@ -232,5 +248,19 @@ ui.sound.addEventListener("click", () => {
 
 ui.start.addEventListener("click", startSimulation);
 canvas.addEventListener("pointerdown", () => audio.unlock());
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+    clock.stop();
+    return;
+  }
+
+  clock.start();
+  if (!animationFrame) animationFrame = requestAnimationFrame(tick);
+});
+
 document.documentElement.dataset.ready = "1";
-requestAnimationFrame(tick);
+clock.start();
+animationFrame = requestAnimationFrame(tick);
