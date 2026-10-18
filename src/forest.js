@@ -153,7 +153,6 @@ export function createForest(scene) {
 
 export function avoidTrees(fighter, trees) {
   if (Math.abs(fighter.throttle) < 0.05 && Math.abs(fighter.strafe) < 0.05) return;
-  if (Math.abs(fighter.throttle) < 0.05 && Math.abs(fighter.strafe) < 0.05) return;
   const yaw = fighter.root.rotation.y;
   const forwardX = Math.sin(yaw);
   const forwardZ = Math.cos(yaw);
