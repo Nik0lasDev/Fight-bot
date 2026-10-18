@@ -11,6 +11,7 @@ import { bodyPart, condemnedLimbs, LIMB_LABEL, readLimbPose } from "./limbs.js";
 const _forward = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _toOpponent = new THREE.Vector3();
+const _sole = new THREE.Vector3();
 
 export class Fighter {
   constructor({ name, color, position }) {
@@ -44,6 +45,9 @@ export class Fighter {
     this.missing = new Set();
     this.losses = [];
     this._jointSample = null;
+    this._jointSampleNext = null;
+    this._lostDesired = [];
+    this._lostActual = [];
 
     this._applyPose(1 / 60, { ko: false });
   }
@@ -108,6 +112,9 @@ export class Fighter {
     this.missing.clear();
     this.losses = [];
     this._jointSample = null;
+    this._jointSampleNext = null;
+    this._lostDesired.length = 0;
+    this._lostActual.length = 0;
     this.skeleton.showLimbs();
     this.skeleton.setHealth(1);
     this._applyPose(1, { ko: false });
@@ -255,10 +262,7 @@ export class Fighter {
     const desired = this._desiredPose(opponent);
     for (const name of POSE_JOINTS) {
       const joint = this.skeleton.joints[name];
-      const next = stepJoint(joint.rotation, desired[name], JOINT_SPEED[name], dt);
-      joint.rotation.x = next.x;
-      joint.rotation.y = next.y;
-      joint.rotation.z = next.z;
+      stepJoint(joint.rotation, desired[name], JOINT_SPEED[name], dt, joint.rotation);
     }
     this._ripLimbs(desired, dt);
 
@@ -269,13 +273,11 @@ export class Fighter {
   }
 
   _ripLimbs(desired, dt) {
-    const actual = readLimbPose(this.skeleton.joints);
-    const lost = new Set([
-      ...condemnedLimbs(desired, null, 0),
-      ...condemnedLimbs(actual, this._jointSample, dt),
-    ]);
+    const actual = readLimbPose(this.skeleton.joints, this._jointSampleNext);
+    for (const id of condemnedLimbs(desired, null, 0, this._lostDesired)) this._loseLimb(id);
+    for (const id of condemnedLimbs(actual, this._jointSample, dt, this._lostActual)) this._loseLimb(id);
+    this._jointSampleNext = this._jointSample;
     this._jointSample = actual;
-    for (const id of lost) this._loseLimb(id);
   }
 
   _loseLimb(id) {
@@ -292,11 +294,10 @@ export class Fighter {
 
   _plantFeet() {
     this.root.updateMatrixWorld(true);
-    const sole = new THREE.Vector3();
     let lowest = Infinity;
     for (const name of ["footL", "footR", "toeTipL", "toeTipR"]) {
-      this.skeleton.anchorWorld(name, sole);
-      lowest = Math.min(lowest, sole.y);
+      this.skeleton.anchorWorld(name, _sole);
+      lowest = Math.min(lowest, _sole.y);
     }
     this.root.position.y -= lowest - 0.02;
     this.standY = this.root.position.y;
