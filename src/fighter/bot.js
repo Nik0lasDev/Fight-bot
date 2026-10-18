@@ -38,6 +38,24 @@ export class Bot {
     if (fighter.ko) return this._hold("nocaute");
     if (opponent.ko) return this._hold("vitória");
     if (fighter.stun > 0) return this._hold("atordoado");
+    if (!fighter.hasWeapon) {
+      const target = fighter.weaponPickup.target;
+      if (target) {
+        const dx = target.x - fighter.root.position.x;
+        const dz = target.z - fighter.root.position.z;
+        const distanceToWeapon = Math.hypot(dx, dz);
+        if (distanceToWeapon > 0.78) {
+          fighter.blocking = false;
+          fighter.root.rotation.y = Math.atan2(dx, dz);
+          fighter.setLocomotion(0.72, 0);
+          this.label = "indo buscar a arma";
+        } else {
+          fighter.setLocomotion(0, 0);
+          this.label = "pegando a arma";
+        }
+        return;
+      }
+    }
     if (fighter.move) {
       this.label = this.plan.label || fighter.move.name;
       fighter.blocking = false;
