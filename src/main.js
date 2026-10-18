@@ -18,6 +18,8 @@ const ui = {
   banner: document.querySelector("#banner"),
   feed: document.querySelector("#feed"),
   sound: document.querySelector("#sound-btn"),
+  pause: document.querySelector("#pause-btn"),
+  restart: document.querySelector("#restart-btn"),
   startScreen: document.querySelector("#start-screen"),
   start: document.querySelector("#start-btn"),
   app: document.querySelector("#app"),
@@ -48,6 +50,7 @@ const match = {
   paused: false,
   userOrbit: false,
   orbitIdle: 0,
+  winner: null,
 };
 
 const feed = [];
@@ -87,6 +90,9 @@ function updateHud() {
 }
 
 function resetRound() {
+  ui.restart.hidden = true;
+  ui.pause.hidden = false;
+  ui.pause.textContent = "Pausar";
   nimbus.reset(spawn.a);
   brasa.reset(spawn.b);
   botA.reset();
@@ -105,6 +111,10 @@ function startSimulation() {
   match.scoreA = 0;
   match.scoreB = 0;
   match.round = 1;
+  match.winner = null;
+  ui.restart.hidden = true;
+  ui.pause.hidden = false;
+  ui.pause.textContent = "Pausar";
   feed.length = 0;
   ui.feed.replaceChildren();
   resetRound();
@@ -119,6 +129,7 @@ function beginFight() {
 function onKnockout(winner, loser) {
   match.phase = "ko";
   match.timer = 3.1;
+  match.winner = winner.name;
   winner.setLocomotion(0, 0);
   loser.setLocomotion(0, 0);
   winner.blocking = false;
@@ -164,13 +175,15 @@ function updateMatch(dt) {
     match.timer -= dt;
     if (match.timer <= 0) {
       if (match.scoreA >= 3 || match.scoreB >= 3) {
-        match.scoreA = 0;
-        match.scoreB = 0;
-        match.round = 1;
+        match.phase = "finished";
+        showBanner(`${match.winner} venceu a luta`);
+        ui.restart.hidden = false;
+        ui.pause.hidden = true;
+        updateHud();
       } else {
         match.round += 1;
+        resetRound();
       }
-      resetRound();
     }
   }
 }
@@ -184,7 +197,7 @@ function tick() {
     if (match.orbitIdle <= 0) match.userOrbit = false;
   }
 
-  if (!match.paused) {
+  if (!match.paused && match.phase !== "finished") {
     if (match.phase === "fight") {
       botA.update(dt, brasa);
       botB.update(dt, nimbus);
@@ -226,21 +239,34 @@ function tick() {
   if (!document.hidden) animationFrame = requestAnimationFrame(tick);
 }
 
+function togglePause() {
+  if (match.phase === "menu" || match.phase === "finished") return;
+  match.paused = !match.paused;
+  ui.pause.textContent = match.paused ? "Retomar" : "Pausar";
+  showBanner(match.paused ? "Pausado" : match.phase === "fight" ? "" : ui.banner.textContent);
+}
+
 window.addEventListener("keydown", (event) => {
   if (match.phase === "menu") return;
   if (event.target instanceof HTMLElement && event.target.closest("button, input, textarea, select, [contenteditable='true']")) return;
 
   if (event.code === "Space") {
     event.preventDefault();
-    match.paused = !match.paused;
-    showBanner(match.paused ? "Pausado" : match.phase === "fight" ? "" : ui.banner.textContent);
+    togglePause();
   }
   if (event.code === "KeyR") {
-    match.paused = false;
-    resetRound();
+    if (match.phase === "finished") {
+      startSimulation();
+    } else {
+      match.paused = false;
+      ui.pause.textContent = "Pausar";
+      resetRound();
+    }
   }
 });
 
+ui.pause.addEventListener("click", togglePause);
+ui.restart.addEventListener("click", startSimulation);
 ui.sound.addEventListener("click", () => {
   const enabled = audio.toggle();
   ui.sound.textContent = enabled ? "Som: ligado" : "Som: desligado";
