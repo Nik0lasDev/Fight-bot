@@ -38,6 +38,14 @@ const nimbus = new Fighter({ name: "Nimbus", color: 0x3ee0c5, position: spawn.a,
 const brasa = new Fighter({ name: "Brasa", color: 0xff6b4a, position: spawn.b, weapon: "mace" });
 scene.add(nimbus.root, brasa.root);
 
+// Each weapon starts physically on the arena floor, ahead of its owner.
+const nimbusWeaponPosition = new THREE.Vector3(-0.4, 0.045, -3.25);
+const brasaWeaponPosition = new THREE.Vector3(0.4, 0.045, 3.25);
+nimbus.weaponPickup.target = nimbusWeaponPosition.clone();
+brasa.weaponPickup.target = brasaWeaponPosition.clone();
+nimbus.skeleton.dropWeapon(scene, nimbusWeaponPosition, 0);
+brasa.skeleton.dropWeapon(scene, brasaWeaponPosition, Math.PI);
+
 const botA = new Bot(nimbus, PROFILES.nimbus);
 const botB = new Bot(brasa, PROFILES.brasa);
 
