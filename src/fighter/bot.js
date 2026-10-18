@@ -40,7 +40,7 @@ export class Bot {
     if (fighter.stun > 0) return this._hold("atordoado");
     if (!fighter.hasWeapon) {
       const target = fighter.weaponPickup.target;
-      if (target) {
+      if (target && fighter.weaponPickup.item?.available) {
         const dx = target.x - fighter.root.position.x;
         const dz = target.z - fighter.root.position.z;
         const distanceToWeapon = Math.hypot(dx, dz);
@@ -48,10 +48,10 @@ export class Bot {
           fighter.blocking = false;
           fighter.root.rotation.y = Math.atan2(dx, dz);
           fighter.setLocomotion(0.72, 0);
-          this.label = "indo buscar a arma";
+          this.label = `buscando ${fighter.weaponPickup.item.name}`;
         } else {
           fighter.setLocomotion(0, 0);
-          this.label = "pegando a arma";
+          this.label = `pegando ${fighter.weaponPickup.item.name}`;
         }
         return;
       }
