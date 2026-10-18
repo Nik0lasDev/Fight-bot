@@ -59,7 +59,7 @@ export function resolveBodies(a, b) {
 
   // Positional correction removes penetration without the old equal-split jitter.
   if (overlap > CONTACT_SLOP) {
-    const correction = (overlap - CONTACT_SLOP) * 0.82 / invTotal;
+    const correction = overlap / invTotal;
     a.root.position.x -= nx * correction * invA;
     a.root.position.z -= nz * correction * invA;
     b.root.position.x += nx * correction * invB;
